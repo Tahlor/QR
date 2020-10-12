@@ -1,0 +1,21 @@
+name: qr
+channels:
+  - defaults
+  - python
+  - conda-forge
+dependencies:
+  - pyqt
+  - pip
+  - python>=3.8
+  - setuptools
+  - sqlite
+  - tk
+  - numpy
+  - pip:
+    - qrcode
+    - opencv-python
+    - requests
+
+prefix: /home/taylor/env/anaconda3/envs/qr
+# conda env update -f environment.yaml
+# pip install qrcode[pil]
