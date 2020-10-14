@@ -1,0 +1,98 @@
+{
+    "name": "example",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":false,
+    "data_loader": {
+        "data_set_name": "QRDataset",
+
+        "data_dir": "../data/QR/",
+        "batch_size": 16,
+        "shuffle": true,
+        "num_workers": 2
+
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 32,
+	"NOTE":"this copies values from data_loader if not present here"
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "loss": {
+        "QR": "CrossEntropy",
+	"NOTE": "losses are drawn from model/loss.py"
+    },
+    "loss_weights": {
+	"QR": 1.0
+
+    },
+    "loss_params":
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "QRGenTrainer",
+        "iterations": 200000,
+        "save_dir": "saved/",
+        "val_step": 10000,
+        "save_step": 10000,
+        "save_step_minor": 100,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+
+	"freeze_param_names": ["qr_net"],
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [     
+                        ["gen"],
+                        ["disc"]
+                    ],
+            "100": [     
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["sample-disc"]
+                    ] 
+        },
+        "new_gen_freq": 0.8,
+        "forget_new_freq": 0.95,
+        "balance_loss": "sign_preserve_var",
+        "balance_var_x": {"0":[1.0]},
+
+        "use_learning_schedule": false,
+
+        "print_dir": "train_out/example",
+        "serperate_print_every": 5000,
+        "print_every": 100
+    },
+    "arch": "QRWraper", 
+    "model": {
+        "generator": "PureGen",
+        "gen_dim": 8,
+        "gen_use_skips": true,
+	"qr": "QR_something",
+        "pretrained_hwr": "saved/qr_net_pretrained/checkpoint-iteration100000.pth",
+        "discriminator": "some disc",
+        "disc_dim": 8
+
+
+    }
+}
