@@ -3,6 +3,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn.utils.weight_norm import weight_norm
+from model.coordconv import CoordConv
 import math
 import numpy as np
 #from .coordconv import CoordConv
@@ -179,7 +180,7 @@ def convReLU(in_ch,out_ch,norm,dilation=1,kernel=3,dropout=None,depthwise=False,
     padding = ( dilation[0]*(kernel[0]//2), dilation[1]*(kernel[1]//2) )
     groups = in_ch if depthwise else 1
     if coordconv is not None:
-        conv2d = CoordConv(in_ch,out_ch, kernel_size=kernel, padding=padding,dilation=dilation,groups=groups,features=coordconv)
+        conv2d = CoordConv(in_ch,out_ch, kernel_size=kernel, padding=padding,dilation=dilation,groups=groups)#,features=coordconv)
     else:
         conv2d = nn.Conv2d(in_ch,out_ch, kernel_size=kernel, padding=padding,dilation=dilation,groups=groups)
     #if i == len(cfg)-1:

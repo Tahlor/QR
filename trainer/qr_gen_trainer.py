@@ -547,8 +547,8 @@ class QRGenTrainer(BaseTrainer):
                 pred=None
             
                 for name in losses.keys():
-                    losses[name] *= self.lossWeights[name[:-4]]
-                    total_loss += losses[name].item()
+                    #losses[name] *= self.lossWeights[name[:-4]]
+                    total_loss += losses[name].item()*self.lossWeights[name[:-4]]
                     total_losses['val_'+name] += losses[name].item()
 
                 #if pred is not None:
