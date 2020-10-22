@@ -35,11 +35,11 @@
     },
     "loss": {
         "char": "cross_entropy",
-	"valid": "sigmoid_BCE_loss"
+	"Xvalid": "sigmoid_BCE_loss"
     },
     "loss_weights": {
 	"char": 1.0,
-	"valid": 1.0
+	"Xvalid": 1.0
 
     },
     "loss_params":
