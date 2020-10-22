@@ -1,10 +1,10 @@
 {
     "name": "decode_cnn",
-    "cuda": false,
+    "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":false,
+    "super_computer":true,
     "data_loader": {
         "data_set_name": "SimpleQRDataset",
         "batch_size": 64,

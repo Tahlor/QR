@@ -12,7 +12,6 @@ from collections import defaultdict
 import random, json, os
 from model.clear_grad import ClearGrad
 #from model.autoencoder import Encoder, EncoderSm, Encoder2, Encoder3, Encoder32
-import cv2
 import torchvision.utils as vutils
 
 

@@ -52,7 +52,8 @@ def superimpose(background_img, qr_img, threshold, output_folder="images/superim
     pady = max(0,y-cropped.shape[0])
     if padx>0 or pady>0:
         cropped = np.pad(cropped,((pady//2,pady//2+pady%2),(padx//2,padx//2+padx%2),(0,0)))
-    added_image =  cv2.addWeighted(cropped, threshold, qr_img, 1 - threshold, 0)
+    #added_image =  cv2.addWeighted(cropped, threshold, qr_img, 1 - threshold, 0)
+    added_image = cropped*threshold + qr_img*(1 - threshold)
     #cv2.imwrite(str(output_file_path), added_image)
     return added_image #output_file_path
 if __name__=='__main__':

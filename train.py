@@ -139,7 +139,10 @@ if __name__ == '__main__':
 
     name=config['name']
     file_name = args.config
-    file_name = file_name[file_name.rindex('/')+4:-5] #remove path
+    if '/' in file_name:
+        file_name = file_name[file_name.rindex('/')+4:-5] #remove path
+    else:
+        file_name = file_name[3:-5]
     if name!=file_name:
         raise Exception('ERROR, name and file name do not match, {} != {} ({})'.format(name,file_name,args.config))
 
