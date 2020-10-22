@@ -11,8 +11,6 @@ from data_loader import getDataLoader
 from collections import defaultdict
 import random, json, os
 from model.clear_grad import ClearGrad
-from model.hw_with_style import correct_pred
-#from datasets.text_data import TextData
 #from model.autoencoder import Encoder, EncoderSm, Encoder2, Encoder3, Encoder32
 import cv2
 import torchvision.utils as vutils
@@ -604,7 +602,7 @@ class QRGenTrainer(BaseTrainer):
         #Get generated and real data to match sizes
         if 'disc' in lesson:
             fake = gen_image #could append normal QR images here
-            real = ?
+            real = image
         elif 'sample-disc' in lesson:
             real = image
 
@@ -701,7 +699,7 @@ class QRGenTrainer(BaseTrainer):
             else:
                 got={}
             for name in get:
-                elif name=='gen_image':
+                if name=='gen_image':
                     got[name] = gen_image.cpu().detach()
                 elif name=='gen_img':
                     got[name] = gen_image.cpu().detach()
@@ -789,7 +787,7 @@ class QRGenTrainer(BaseTrainer):
                 label=None
             images.append(image)
             #max_w = max(max_w,image.size(3))
-            if label is not None:
+            #if label is not None:
         #for b in range(batch_size):
         #    if images[b].size(3)<max_w:
         #        diff = max_w -  images[b].size(3)
@@ -797,6 +795,7 @@ class QRGenTrainer(BaseTrainer):
         #    if labels[b].size(0)<max_l:
         #        diff = max_l -  labels[b].size(0)
         #        labels[b] = F.pad( labels[b].permute(1,2,0), (0,diff),value=PADDING_CONSTANT).permute(2,0,1)
+        
         assert(len(images)==batch_size)
         if len(labels)>0:
             return torch.cat(images,dim=0), torch.cat(labels,dim=0)

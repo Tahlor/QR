@@ -9,7 +9,6 @@ import utils
 #from model.lf_loss import xyrs_loss as lf_xyrs_loss
 #from model.lf_loss import end_pred_loss as lf_end_loss
 #from torch.nn import CTCLoss, L1Loss
-from model.aligned_l1_loss import alignedL1Loss
 from model.pyramid_l1_loss import pyramidL1Loss
 from model.dtw_loss import DTWLoss
 from model.key_loss import pushMinDist

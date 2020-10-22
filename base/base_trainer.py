@@ -165,7 +165,7 @@ class BaseTrainer:
             exit()
         
         self.monitor = config['trainer']['monitor']
-        self.monitor_mode = config['trainer']['monitor_mode']
+        self.monitor_mode = config['trainer']['monitor_mode'] if 'monitor_mode' in config['trainer'] else 'none'
         #assert self.monitor_mode == 'min' or self.monitor_mode == 'max'
         self.monitor_best = math.inf if self.monitor_mode == 'min' else -math.inf
         self.retry_count = config['trainer']['retry_count'] if 'retry_count' in config['trainer'] else 1

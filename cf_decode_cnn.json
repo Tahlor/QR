@@ -1,23 +1,21 @@
 {
     "name": "decode_cnn",
-    "cuda": true,
+    "cuda": false,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
     "super_computer":false,
     "data_loader": {
-        "data_set_name": "QRDataset",
-
-        "data_dir": "../data/QR/",
-        "batch_size": 16,
+        "data_set_name": "SimpleQRDataset",
+        "batch_size": 64,
         "shuffle": true,
-        "num_workers": 2
+        "num_workers": 2,
+	"data_dir": "none"
 
     },
     "validation": {
         "shuffle": false,
-        "batch_size": 32,
-	"NOTE":"this copies values from data_loader if not present here"
+        "batch_size": 128
     },
 
     
@@ -59,23 +57,16 @@
         "verbosity": 1,
         "monitor": "loss",
 
-        "curriculum": {
-            "0": [     
-                        ["?"]
-	    ]
-        },
-        "use_learning_schedule": false,
+        "use_learning_schedule": false
 
-        "print_dir": "train_out/example",
-        "serperate_print_every": 5000,
-        "print_every": 100
     },
     "arch": "DecoderCNN", 
     "model": {
-	   "input_size": [256,256],
-	   "cnn_layer_specs": [3,32,"ccv--32","M","ccv--64","ccv--64","M","ccv--128","ccv--128","ccv--128","M","ccv--256","ccv--256","ccv--256"],
+	   "input_size": [125,125],
+	   "cnn_layer_specs": [1,32,"ccv-32","M","ccv-64","ccv-64","M","ccv-128","ccv-128","ccv-128","M","ccv-256","ccv-256","ccv-256"],
 	   "fully_connected_specs": ["FC2048","FC2048"],
-	   "max_message_len": 17
+	   "max_message_len": 17,
+	   "num_char_class": 11
 
 
     }

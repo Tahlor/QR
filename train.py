@@ -14,6 +14,7 @@ from logger import Logger
 import socket
 
 def update_status(name,message,supercomputer):
+    return
     import requests
     if supercomputer:
         return

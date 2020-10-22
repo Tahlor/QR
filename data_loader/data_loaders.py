@@ -1,10 +1,8 @@
 import torch
 import torch.utils.data
 import numpy as np
-from datasets import hw_dataset
-from datasets import synth_text_dataset
 from base import BaseDataLoader
-
+from datasets import simple_qr_dataset
 
 
 
@@ -31,10 +29,8 @@ def getDataLoader(config,split):
             numDataWorkers = 1
         shuffleValid = config['validation']['shuffle']
 
-        elif data_set_name=='HWDataset':
-            return withCollate(hw_dataset.HWDataset,hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
-        elif data_set_name=='SynthHWDataset':
-            return withCollate(synth_hw_dataset.SynthHWDataset,synth_hw_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        if data_set_name=='SimpleQRDataset':
+            return withCollate(simple_qr_dataset.SimpleQRDataset,simple_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='FormsLF':
             return basic(FormsLF,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         else:

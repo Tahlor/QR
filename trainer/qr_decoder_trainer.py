@@ -3,7 +3,7 @@ import torch
 from base import BaseTrainer
 import timeit
 from utils.error_rates import cer
-
+from collections import defaultdict
 
 class QRDecoderTrainer(BaseTrainer):
     """
@@ -24,19 +24,23 @@ class QRDecoderTrainer(BaseTrainer):
         self.valid = True if self.valid_data_loader is not None else False
         #self.log_step = int(np.sqrt(self.batch_size))
 
+        self.loss_params=defaultdict(list)
         if 'loss_params' in config:
-            self.loss_params=config['loss_params']
-        else:
-            self.loss_params={}
-	self.lossWeights = config['loss_weights'] if 'loss_weights' in config else defaultdict(lambda:1)
+            self.loss_params.update(config['loss_params'])
+        self.loss_weights = config['loss_weights'] if 'loss_weights' in config else defaultdict(lambda:1)
 
     #def _to_tensor(self, data, target):
     #    return self._to_tensor_individual(data), _to_tensor_individual(target)
-    def _to_tensor(self, *datas):
-        ret=(self._to_tensor_individual(datas[0]),)
-        for i in range(1,len(datas)):
-            ret+=(self._to_tensor_individual(datas[i]),)
-        return ret
+    def _to_tensor(self, data):
+        if self.with_cuda:
+            image = data['image'].to(self.gpu)
+            targetvalid = data['targetvalid'].to(self.gpu)
+            targetchar = data['targetchar'].to(self.gpu)
+        else:
+            image = data['image']
+            targetvalid = data['targetvalid']
+            targetchar = data['targetchar']
+        return image, targetvalid,targetchar
     def _to_tensor_individual(self, data):
         if type(data)==str:
             return data
@@ -94,9 +98,9 @@ class QRDecoderTrainer(BaseTrainer):
         #print('data: '+str(toc-tic))
         
         #tic=timeit.default_timer()
-	loss=0
+        loss=0
         for name in losses.keys():
-            losses[name] *= self.lossWeights[name[:-4]]
+            losses[name] *= self.loss_weights[name[:-4]]
             loss += losses[name]
             losses[name] = losses[name].item()
         if len(losses)>0:
@@ -107,7 +111,7 @@ class QRDecoderTrainer(BaseTrainer):
         #print('for/bac: '+str(toc-tic))
 
         #tic=timeit.default_timer()
-        metrics = self._eval_metrics(output, target)
+        #metrics = self._eval_metrics(output, target)
         #toc=timeit.default_timer()
         #print('metric: '+str(toc-tic))
 
@@ -119,7 +123,7 @@ class QRDecoderTrainer(BaseTrainer):
 
         log = {
             'loss': loss,
-            'metrics': metrics,
+            #'metrics': metrics,
            **losses,
            **run_log
         }
@@ -160,9 +164,9 @@ class QRDecoderTrainer(BaseTrainer):
                 total_val_loss += loss.item()
                 total_val_metrics += self._eval_metrics(output, target)
 
-		for name in losses.keys():
-                    #losses[name] *= self.lossWeights[name[:-4]]
-                    total_loss += losses[name].item()*self.lossWeights[name[:-4]]
+                for name in losses.keys():
+                    #losses[name] *= self.loss_weights[name[:-4]]
+                    total_loss += losses[name].item()*self.loss_weights[name[:-4]]
                     total_losses['val_'+name] += losses[name].item()
                 total_cer+=log['cer']
                 total_valid_acc+=log['valid_acc']
@@ -180,25 +184,27 @@ class QRDecoderTrainer(BaseTrainer):
         }
 
     def run(self,instance):
-        data,targetvalid,targetchars = self._to_tensor(instance)
-        gt_chars = instance['?']
-        outvalid, outchars = self.model(data)
+        image,targetvalid,targetchars = self._to_tensor(instance)
+        gt_chars = instance['gt_char']
+        outvalid, outchars = self.model(image)
         losses={}
-        loss['char'] = self.loss['char'](outchars,targetchars,*self.lossParams['char'])
-        loss['valid'] = self.loss['valid'](outvalids,targetvalids,*self.lossParams['valid'])
+        losses['charLoss'] = self.loss['char'](outchars,targetchars,*self.loss_params['char'])
+        losses['validLoss'] = self.loss['valid'](outvalid,targetvalid,*self.loss_params['valid'])
 
         chars=[]
-        char_indexes = outchars.argmax(dim=2)
+        char_indexes = outchars.argmax(dim=1)
         batch_size = outchars.size(0)
+        b_cer=0
         for b in range(batch_size):
             s=''
-            for p in range(outchars.size(1)):
-                s+=self.index_to_char[char_indexes[b,p]]
+            for p in range(outchars.size(2)):
+                if char_indexes[b,p].item()>0: #skip the null character
+                    s+=self.data_loader.dataset.index_to_char[char_indexes[b,p].item()]
             chars+=s
             
             b_cer += cer(s,gt_chars[b])
             
-        acc = torch.logical_and(outvalid[b]>0,targetvalid[b]>0).mean()
+        acc = torch.logical_and(outvalid>0,targetvalid>0).float().mean()
         log={
                 'cer':b_cer/batch_size,
                 'valid_acc':acc
