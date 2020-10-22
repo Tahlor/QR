@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import json
 import math
-import cv2
+#import cv2
 #TODO import models and discrimonators
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt

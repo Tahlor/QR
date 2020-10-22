@@ -2,7 +2,6 @@ import os, math
 import struct
 import torch
 import torch.nn.functional as F
-import cv2
 import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage import draw
