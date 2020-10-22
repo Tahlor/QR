@@ -189,7 +189,7 @@ class QRDecoderTrainer(BaseTrainer):
         outvalid, outchars = self.model(image)
         losses={}
         losses['charLoss'] = self.loss['char'](outchars,targetchars,*self.loss_params['char'])
-        if 'valid' in loss:
+        if 'valid' in self.loss:
             losses['validLoss'] = self.loss['valid'](outvalid,targetvalid,*self.loss_params['valid'])
 
         chars=[]
@@ -206,7 +206,6 @@ class QRDecoderTrainer(BaseTrainer):
             b_cer += cer(s,gt_chars[b])
             
         acc = torch.logical_and(outvalid>0,targetvalid>0).float().mean()
-        import pdb;pdb.set_trace()
         log={
                 'cer':b_cer/batch_size,
                 'valid_acc':acc
