@@ -7,7 +7,7 @@
     "super_computer":true,
     "data_loader": {
         "data_set_name": "SimpleQRDataset",
-        "batch_size": 64,
+        "batch_size": 32,
         "shuffle": true,
         "num_workers": 2,
 	"data_dir": "none"
@@ -48,11 +48,11 @@
     "metrics": [],
     "trainer": {
         "class": "QRDecoderTrainer",
-        "iterations": 200000,
+        "iterations": 30000,
         "save_dir": "saved/",
         "val_step": 10000,
         "save_step": 10000,
-        "save_step_minor": 100,
+        "save_step_minor": 500,
         "log_step": 100,
         "verbosity": 1,
         "monitor": "loss",

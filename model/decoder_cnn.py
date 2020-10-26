@@ -31,7 +31,7 @@ class DecoderCNN(BaseModel):
         n_out = 1+self.num_char_class*max_message_len
 
         fully_connected_layers = config['fully_connected_specs']
-        fully_connected_layers = [cnn_output_size*ch_last] + fully_connected_layers + ['FC{}'.format(n_out)]
+        fully_connected_layers = [cnn_output_size*ch_last] + fully_connected_layers + ['FCnR{}'.format(n_out)]
         self.fc_layers,_ =  make_layers(fully_connected_layers,dropout=True,norm='batch')
 
         self.cnn_layers=nn.Sequential(*self.cnn_layers)
@@ -45,4 +45,4 @@ class DecoderCNN(BaseModel):
         x=self.cnn_layers(x)
         x=x.view(batch_size,-1)
         out= self.fc_layers(x)
-        return out[:,0], out[:,1:].view(batch_size,self.num_char_class,-1)
+        return out[:,0], out[:,1:].view(batch_size,-1,self.num_char_class)
