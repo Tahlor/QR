@@ -47,6 +47,7 @@ class SimpleQRDataset(Dataset):
             box_size=5,
             border=2,
         )
+
         if self.indexes is not None:
             idx = self.indexes[idx]
         gt_char = '{}'.format(idx)
