@@ -27,12 +27,6 @@
         "weight_decay": 0,
         "betas": [0.5,0.999]
     },
-    "optimizer_type_discriminator": "Adam",
-    "optimizer_discriminator": {
-        "lr": 0.0002,
-        "weight_decay": 0,
-        "betas": [0.5,0.999]
-    },
     "loss": {
         "char": "cross_entropy",
 	"Xvalid": "sigmoid_BCE_loss"

@@ -383,6 +383,7 @@ class StyledConvBlock(nn.Module):
         upsample=False,
         only_vertical=False,
         fused=False,
+        dilation=1
     ):
         super().__init__()
 
@@ -414,14 +415,14 @@ class StyledConvBlock(nn.Module):
                     self.conv1 = nn.Sequential(
                         nn.Upsample(scale_factor=scale, mode='nearest'),
                         nn.Conv2d(
-                            in_channel, out_channel, kernel_size, padding=padding
+                            in_channel, out_channel, kernel_size, padding=padding, dilation=dilation
                         ),
                         Blur(out_channel),
                     )
 
             else:
                 self.conv1 = nn.Conv2d(
-                    in_channel, out_channel, kernel_size, padding=padding
+                    in_channel, out_channel, kernel_size, padding=padding,dilation=dilation
                 )
 
         self.noise1 = equal_lr(NoiseInjection(out_channel))

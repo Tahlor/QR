@@ -41,20 +41,6 @@ class QRDecoderTrainer(BaseTrainer):
             targetvalid = data['targetvalid']
             targetchar = data['targetchar']
         return image, targetvalid,targetchar
-    def _to_tensor_individual(self, data):
-        if type(data)==str:
-            return data
-        if type(data)==list or type(data)==tuple:
-            return [self._to_tensor_individual(d) for d in data]
-        if (len(data.size())==1 and data.size(0)==1):
-            return data[0]
-        if type(data) is np.ndarray:
-            data = torch.FloatTensor(data.astype(np.float32))
-        #elif type(data) is torch.Tensor:
-        #    data = data.type(torch.FloatTensor)
-        if self.with_cuda:
-            data = data.to(self.gpu)
-        return data
 
     def _eval_metrics(self, output, target):
         acc_metrics = np.zeros(len(self.metrics))

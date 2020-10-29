@@ -12,37 +12,6 @@ from scipy.ndimage.morphology import distance_transform_edt
 
 
 
-class AdaINGen(nn.Module):
-    def __init__(self,n_class,style_dim,n_res1=2,n_res2=1,n_res3=0, dim=256, output_dim=1, style_transform_dim=None,activ='lrelu', type="Something",decoder_weights=None):
-        super(AdaINGen, self).__init__()
-        self.pad=True
-        self.char_style=False
-        if type=='Something':
-            self.gen = Something(n_class, n_res1, n_res2, n_res3, dim, output_dim, res_norm='adain', activ=activ, pad_type='zero')
-        else:
-            print('unknown generator: '+type)
-            raise NotImplementedError('unknown generator: '+type)
-        num_adain_params = get_num_adain_params(self.gen)
-        if style_transform_dim is None:
-            style_transform_dim=(2*style_dim+num_adain_params)//3
-        self.style_transform = MLP(style_dim, num_adain_params, style_transform_dim, 3, norm='none', activ=activ)
-
-    def forward(self, chars, style, mask=None, return_intermediate=None):
-        adain_params = self.style_transform(style[0] if self.char_style else style)
-        assign_adain_params(adain_params, self.gen)
-        content = chars.permute(1,2,0) #swap [T,b,cls] to [b,cls,T]
-        if self.pad:
-            content = F.pad(content,(1,1),value=0)
-        content = content.view(content.size(0),content.size(1),1,content.size(2)) #now [b,cls,H,W]
-        if mask is None:
-            return self.gen(content,style)
-        elif type(self.gen) is NewRNNDecoder:
-            return self.gen(mask,content,style,return_intermediate=return_intermediate)
-        else:
-            return self.gen(mask,content,style)
-
-
-
 
 
 class QRWraper(BaseModel):
@@ -68,8 +37,8 @@ class QRWraper(BaseModel):
 
 
         qr_type= config['qr_net'] #if 'qr_net' in config else 'default'
-        if 'seomthign' in qr_type:
-            self.qr_net=QRModel_something(params,...)
+        if 'DecoderCNN' in qr_type:
+            self.qr_net=DecoderCNN(
         elif 'none' in qr_type:
             self.qr_net=None
         else:
@@ -79,7 +48,7 @@ class QRWraper(BaseModel):
             snapshot = torch.load(config['pretrained_qr'], map_location='cpu')
             qr_state_dict={}
             for key,value in  snapshot['state_dict'].items():
-                if key[:4]=='qr.':
+                if key[:4]=='qr_net.':
                     qr_state_dict[key[4:]] = value
             if len(qr_state_dict)==0:
                 qr_state_dict=snapshot['state_dict']
@@ -92,14 +61,13 @@ class QRWraper(BaseModel):
 
         if 'generator' in config and config['generator'] == 'none':
             self.generator = None
-        elif 'simple' in config['generator']:
-            self.generator=SimpleGen()
-        elif 'Pure' in config['generator'] and 'no space' in config['generator']:
+        elif 'Conv' in config['generator']:
             g_dim = config['gen_dim'] if 'gen_dim' in config else 256
             n_style_trans = config['n_style_trans'] if 'n_style_trans' in config else 6
-            g_depth1 = config['gen_depth1'] if 'gen_depth1' in config else 3
-            g_depth2 = config['gen_depth2'] if 'gen_depth2' in config else 2
-            self.generator = PureGenerator(num_class,style_dim,g_dim,n_style_trans=n_style_trans,depth1=g_depth1,depth2=g_depth2)
+            down_steps = config['down_steps'] if 'down_steps' in config else 3
+            self.generator = ConvGen(num_class,style_dim,g_dim,down_steps,n_style_trans=n_style_trans)
+        else:
+            raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 
         if 'pretrained_generator' in config and config['pretrained_generator'] is not None:
             snapshot = torch.load(config['pretrained_generator'], map_location='cpu')

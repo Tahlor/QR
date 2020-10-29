@@ -184,6 +184,19 @@ class QRGenTrainer(BaseTrainer):
             if label is not None:
                 label = label.to(self.gpu)
         return image, label
+    def _to_tensor(self, data):
+        if self.with_cuda:
+            image = data['image'].to(self.gpu)
+            qr_image = data['qr_image'].to(self.gpu)
+            targetvalid = data['targetvalid'].to(self.gpu)
+            targetchar = data['targetchar'].to(self.gpu)
+        else:
+            image = data['image']
+            qr_image = data['qr_image']
+            targetvalid = data['targetvalid']
+            targetchar = data['targetchar']
+        return image,qr_image, targetvalid,targetchar
+
 
     #I don't use this for metrics, I find it easier to just compute them in run()
     def _eval_metrics(self, typ,name,output, target):
@@ -309,7 +322,7 @@ class QRGenTrainer(BaseTrainer):
             #    qrLoss += losses[name]
             #elif self.balance_loss and 'authorClass' in name:
             #    authorClassLoss += losses[name]
-            if self.balance_loss and 'QR' in name:
+            if self.balance_loss and 'char' in name or 'valid' in name:
                 qrLoss += losses[name]
             else:
                 loss += losses[name]
@@ -577,38 +590,43 @@ class QRGenTrainer(BaseTrainer):
 
 
     def run(self,instance,lesson,get=[]):
-        image, label = self._to_tensor(instance)
+        qr_image, targetvalid,targetchar = self._to_tensor(instance)
         batch_size = label.size(1)
         label_lengths = instance['label_lengths']
 
         losses = {}
 
         if 'gen' in lesson or 'disc' in lesson or 'gen' in get:
-            gen_image = self.model(image) #TODO
+            gen_image = self.model(qr_image) #TODO
 
             if self.sample_disc and 'eval' not in lesson and 'valid' not in lesson:
                 self.add_gen_sample(gen_image)
         else:
             gen_image = None
 
-        if 'gen' in lesson and 'QR' in self.loss and 'eval' not in lesson:
-            gen_pred = self.model.qr_net(gen_image)
-            gen_qrLoss = self.loss['QR'](gen_pred,label)
-            losses['QRLoss'] = gen_qrLoss
+        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson:
+            gen_valid,gen_chars = self.model.qr_net(gen_image)
+            losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+            if 'valid' in self.loss:
+                losses['validLoss'] = self.loss['valid'](gen_valid,targetvalid,*self.loss_params['valid'])
+            #gen_qrLoss = self.loss['QR'](gen_pred,label)
+            #losses['QRLoss'] = gen_qrLoss
 
 
 
         #Get generated and real data to match sizes
+        if 'sample-disc' in lesson or 'disc' in lesson:
+            real = instance['image']
+            if self.with_cuda:
+                real = real.to(self.gpu)
         if 'disc' in lesson:
             fake = gen_image #could append normal QR images here
-            real = image
         elif 'sample-disc' in lesson:
-            real = image
 
             fake = self.sample_gen(batch_size)
             if fake is None:
                 return None
-            fake = fake.to(image.device)
+            fake = fake.to(qr_image.device)
 
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
