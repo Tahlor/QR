@@ -83,8 +83,8 @@
         "serperate_print_every": 5000,
         "print_every": 100
     },
-    "arch": "QRWraper", 
     "model": {
+	"arch": "QRWraper", 
         "generator": "PureGen",
         "gen_dim": 8,
         "gen_use_skips": true,

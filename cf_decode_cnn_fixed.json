@@ -1,5 +1,5 @@
 {
-    "name": "decode_cnn",
+    "name": "decode_cnn_fixed",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
@@ -7,6 +7,7 @@
     "super_computer":true,
     "data_loader": {
         "data_set_name": "SimpleQRDataset",
+	"final_size": 256,
         "batch_size": 32,
         "shuffle": true,
         "num_workers": 2,
@@ -56,7 +57,7 @@
     },
     "model": {
            "arch": "DecoderCNN", 
-	   "input_size": [125,125],
+	   "input_size": [256,256],
 	   "cnn_layer_specs": [1,32,"ccv-32","M","ccv-64","ccv-64","M","ccv-128","ccv-128","ccv-128","M","ccv-256","ccv-256","ccv-256"],
 	   "fully_connected_specs": ["FC2048","FC2048"],
 	   "max_message_len": 17,

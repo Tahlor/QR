@@ -11,6 +11,71 @@ channels = 1
 leak = 0.1
 #w_g = 4
 
+class HybridDiscriminator(nn.Module):
+    def __init__(self, more_low=False,dim=16, global_pool=False):
+        super(HybridDiscriminator, self).__init__()
+
+        convs1 = []
+        if more_low:
+            convs1+= [
+                SpectralNorm(nn.Conv2d(channels, dim, 7, stride=1, padding=(3,3))),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(dim, dim, 3, stride=1, padding=(1,1))),
+                nn.LeakyReLU(leak,True),
+                ]
+        else:
+            convs1+= [
+                SpectralNorm(nn.Conv2d(channels, dim, 3, stride=1, padding=(1,1))),
+                nn.LeakyReLU(leak,True),
+                ]
+        convs1+= [
+                SpectralNorm(nn.Conv2d(dim, 2*dim, 4, stride=2, padding=(0,0))),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(2*dim, 2*dim, 3, stride=1, padding=(0,0))),
+                nn.Dropout2d(0.05,True),
+                nn.LeakyReLU(leak,True),
+
+                SpectralNorm(nn.Conv2d(2*dim, 4*dim, 4, stride=2, padding=(0,0))),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(4*dim, 4*dim, 3, stride=1, padding=(0,0))),
+                nn.Dropout2d(0.05,True),
+                nn.LeakyReLU(leak,True),
+
+                SpectralNorm(nn.Conv2d(4*dim, 8*dim, 4, stride=2, padding=(0,0))),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(8*dim, 8*dim, 3, stride=1, padding=(0,0))),
+                nn.Dropout2d(0.05,True),
+                nn.LeakyReLU(leak,True),
+                ]
+
+
+        self.convs1 = nn.Sequential(*convs1)
+        self.convs2 = nn.Sequential(
+                SpectralNorm(nn.Conv2d(8*dim, 16*dim, 4, stride=2, padding=(0,0))),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(16*dim, 16*dim, 3, stride=1, padding=(0,0))),
+                nn.Dropout2d(0.05,True),
+                nn.LeakyReLU(leak,True),
+                SpectralNorm(nn.Conv2d(16*dim, 16*dim, 4, stride=2, padding=(0,0))),
+                nn.Dropout2d(0.05,True),
+                nn.LeakyReLU(leak,True),
+                )
+        self.finalMed = nn. Sequential(
+                SpectralNorm(nn.Conv2d(8*dim, 1, 1, stride=1, padding=(0,0))),
+                )
+        self.gp_final = nn.Linear(16*dim,1)
+
+
+    def forward(self, x):
+        med = self.convs1(x)
+        last = self.convs2(med)
+        med = self.finalMed(med)
+        batch_size = x.size(0)
+        gp = F.adaptive_avg_pool2d(last,1).view(batch_size,-1)
+        gp = self.gp_final(gp)
+        med = F.adaptive_avg_pool2d(med,1).view(batch_size,-1)
+        return (med+gp)/2
+
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()

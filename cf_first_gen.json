@@ -7,12 +7,12 @@
     "super_computer":false,
     "data_loader": {
 	    "QR_dataset": {
-		"data_set_name": "SimpleQRDataset"
+		"data_set_name": "SimpleQRDataset",
+		"final_image_size": 256
 	    },
 	    "image_dataset_name": "LSUN",
 	    "image_class": "bedroom",
-	    "image_dataset_dir": "../data/LSUN",
-	    "data_dir": "none",
+	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
 	    "batch_size": 32,
 	    "num_workers": 2
@@ -81,15 +81,14 @@
         "serperate_print_every": 5000,
         "print_every": 100
     },
-    "arch": "QRWraper", 
     "model": {
+	"arch": "QRWraper", 
         "generator": "ConvGen",
-        "gen_dim": 8,
-        "gen_use_skips": true,
-	"qr": "DecoderCNN",
-        "pretrained_qr": "saved/qr_net_pretrained/checkpoint-iteration100000.pth",
-        "discriminator": "some disc",
-        "disc_dim": 8
+        "gen_dim": 16,
+        "gen_use_skips": 3,
+        "pretrained_qr": "saved/decode_cnn/checkpoint-latest.pth",
+        "discriminator": "hybrid"
+      
 
 
     }

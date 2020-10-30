@@ -51,7 +51,7 @@ class ConvGen(nn.Module):
 
         self.style_emb = nn.Sequential(*layers)
 
-    def forward(self, qr_img,style,mask=None,return_intermediate=False): #, noise=None):
+    def forward(self, qr_img,style):
         style = self.style_emb(style)
         x,_ = self.in_conv((qr_img,style))
         prev_xs=[]

@@ -50,9 +50,7 @@ def main(config, resume):
     data_loader, valid_data_loader = getDataLoader(config,split)
     #valid_data_loader = data_loader.split_validation()
 
-    model = eval(config['arch'])(config['model'])
-    if 'style' in config['model'] and 'lookup' in config['model']['style']:
-        model.style_extractor.add_authors(data_loader.dataset.authors) ##HERE
+    model = eval(config['model']['arch'])(config['model'])
     model.summary()
     if config['trainer']['class']=='HWRWithSynthTrainer':
         gen_model = model
