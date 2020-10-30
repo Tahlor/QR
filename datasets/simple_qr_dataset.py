@@ -51,7 +51,7 @@ class SimpleQRDataset(Dataset):
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=11,
+            box_size=10,
             border=2,
         )
         if self.indexes is not None:
@@ -64,8 +64,6 @@ class SimpleQRDataset(Dataset):
         if self.final_size is not None:
             img = img_f.resize(img,(self.final_size,self.final_size))
         img = (torch.from_numpy(img)[None,...].float()/255)*2 -1
-
-        assert(img.max()==1 and img.min()==-1)
 
         targetchar = torch.LongTensor(17).fill_(0)
         for i,c in enumerate(gt_char):

@@ -1,21 +1,22 @@
 {
     "name": "first_gen",
-    "cuda": true,
+    "cuda": false,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
     "super_computer":false,
     "data_loader": {
+	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
 		"data_set_name": "SimpleQRDataset",
-		"final_image_size": 256
+		"final_size": 256
 	    },
 	    "image_dataset_name": "LSUN",
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 32,
-	    "num_workers": 2
+	    "batch_size": 4,
+	    "num_workers": 0
     },
 
     "validation": {

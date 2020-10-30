@@ -15,6 +15,7 @@ class DecoderCNN(BaseModel):
             input_size=[input_size,input_size]
 
         cnn_output_size=list(input_size)
+        self.input_size=input_size
         scale=1
         for a in cnn_layer_specs:
             if a=='M' or (type(a) is str and a[0]=='D'):
@@ -41,6 +42,8 @@ class DecoderCNN(BaseModel):
 
 
     def forward(self, x):
+        if x.size(2)!= self.input_size(0):
+            x = F.interpolate(x,self.input_size,mode='bilinear')
         batch_size=x.size(0)
         x=self.cnn_layers(x)
         x=x.view(batch_size,-1)

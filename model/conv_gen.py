@@ -2,34 +2,35 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .pure_gen import StyledConvBlock, PixelNorm
+from .pure_gen import StyledConvBlock, PixelNorm, EqualConv2d
 
 class ConvGen(nn.Module):
-    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6)
+    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6):
         super(ConvGen, self).__init__()
         fused=True
 
         self.down_convs = nn.ModuleList()
         for i in range(down_steps):
             dim*=2
-            self.down_convs.append( nn.Sequentail(
-                    nn.MaxPool(2), 
+            self.down_convs.append( nn.Sequential(
+                    nn.MaxPool2d(2), 
                     nn.Conv2d(dim//2,dim,3,padding=1),
                     nn.BatchNorm2d(dim),
                     nn.LeakyReLU(0.1),
-                    nn.Conv2d(dim,dim,3,padding=1)
+                    nn.Conv2d(dim,dim,3,padding=1),
                     nn.BatchNorm2d(dim),
                     nn.LeakyReLU(0.1)
                     ))
         self.up_convs = nn.ModuleList()
         for i in range(down_steps):
-            self.up_convs.append( nn.Sequentail(
-                    StyledConvBlock(dim,dim,upsample=False,style_dim=style_size)
+            self.up_convs.append( nn.Sequential(
+                    StyledConvBlock(2*dim if i!=0 else dim,dim,upsample=False,style_dim=style_size),
                     StyledConvBlock(dim,dim//2,upsample=True,fused=fused,style_dim=style_size)
                     ))
             dim=dim//2
+        self.up_convs.append(StyledConvBlock(2*dim,dim,upsample=False,style_dim=style_size))
 
-        self.in_convs = nn.Sequentail(
+        self.in_conv = nn.Sequential(
                 nn.Conv2d(1,dim,7,padding=3),
                 nn.BatchNorm2d(dim),
                 nn.LeakyReLU(0.1),
@@ -37,8 +38,7 @@ class ConvGen(nn.Module):
                 #nn.BatchNorm2d(dim),
                 #nn.LeakyReLU(0.1)
                 )
-        self.out_convs = nn.Sequentail(
-                StyledConvBlock(dim,dim,upsample=False,style_dim=style_size),
+        self.out_conv = nn.Sequential(
                 EqualConv2d(dim, 3, 1),
                 nn.Tanh()
                 )
@@ -53,15 +53,18 @@ class ConvGen(nn.Module):
 
     def forward(self, qr_img,style):
         style = self.style_emb(style)
-        x,_ = self.in_conv((qr_img,style))
+        x = self.in_conv(qr_img)
         prev_xs=[]
         for down_conv in self.down_convs:
             prev_xs.append(x)
-            x,_ = self.conv2(x)
-        y = self.up_convs[-1]((x,style))
-        for i in range(len(self.up_convs)-2,-1,-1):
-            y = self.up_convs[i]((torch.cat([prev_xs[i],y],dim=1),style))
-        y = self.out_conv((torch.cat([prev_xs[0],y],dim=1),style))
+            x = down_conv(x)
+        y,_ = self.up_convs[0]((x,style))
+        #for i in range(len(self.up_convs)-2,-1,-1):
+        #    y,_ = self.up_convs[i]((torch.cat([prev_xs[i],y],dim=1),style))
+        prev_xs.reverse()
+        for up_conv,x in zip(self.up_convs[1:],prev_xs):
+            y,_ = up_conv((torch.cat([x,y],dim=1),style))
+        y = self.out_conv(y)
 
         return y+qr_img
 
