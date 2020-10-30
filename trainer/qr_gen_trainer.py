@@ -174,28 +174,18 @@ class QRGenTrainer(BaseTrainer):
             self.triplet_data_loader_iter = iter(self.triplet_data_loader)
 
 
-    def _to_tensor(self, instance):
-        image = instance['image']
-        label = instance['label']
-
-        if self.with_cuda:
-            if image is not None:
-                image = image.to(self.gpu)
-            if label is not None:
-                label = label.to(self.gpu)
-        return image, label
     def _to_tensor(self, data):
         if self.with_cuda:
-            image = data['image'].to(self.gpu)
+            #image = data['image'].to(self.gpu)
             qr_image = data['qr_image'].to(self.gpu)
             targetvalid = data['targetvalid'].to(self.gpu)
             targetchar = data['targetchar'].to(self.gpu)
         else:
-            image = data['image']
+            #image = data['image']
             qr_image = data['qr_image']
             targetvalid = data['targetvalid']
             targetchar = data['targetchar']
-        return image,qr_image, targetvalid,targetchar
+        return qr_image, targetvalid,targetchar
 
 
     #I don't use this for metrics, I find it easier to just compute them in run()
@@ -591,8 +581,7 @@ class QRGenTrainer(BaseTrainer):
 
     def run(self,instance,lesson,get=[]):
         qr_image, targetvalid,targetchar = self._to_tensor(instance)
-        batch_size = label.size(1)
-        label_lengths = instance['label_lengths']
+        batch_size = qr_image.size(0)
 
         losses = {}
 

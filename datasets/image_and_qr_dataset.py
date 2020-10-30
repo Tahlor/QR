@@ -38,6 +38,8 @@ class ImageAndQRDataset(Dataset):
                     torchvision.transforms.RandomHorizontalFlip(),
                     torchvision.transforms.ColorJitter(0.05,0.05,0.05,0.01)
                     ])
+            if split=='valid':
+                split='val'
             self.image_dataset = torchvision.datasets.LSUN(dirPath,classes=['{}_{}'.format(config['image_class'],split)],transform=transform)
 
     def __len__(self):
@@ -48,8 +50,8 @@ class ImageAndQRDataset(Dataset):
         qr_index = idx%len(self.qr_dataset)
         image_index = idx//len(self.qr_dataset)
 
-        qr_data = self.qr_dataset[idx]
-        image,target = self.image_dataset[idx]
+        qr_data = self.qr_dataset[qr_index]
+        image,target = self.image_dataset[image_index]
 
         image = np.array(image)
         image = (2*(torch.from_numpy(image).float()/255)-1).permute(2,0,1)
@@ -58,6 +60,7 @@ class ImageAndQRDataset(Dataset):
         #if qr_image.size(1)!=image.size(1) or qr_image.size(2)!=image.size(2):
         #    #qr_image = img_f.resize(qr_image[0],image.shape[1:])[None,...]
         #    qr_image = F.interpolate(qr_image[None,...],image.shape[1:],mode='bilinear')[0]
+        assert(qr_image.size(1)==image.size(1))
 
         qr_data['qr_image'] = qr_image
         qr_data['image'] = image

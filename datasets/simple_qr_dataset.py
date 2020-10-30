@@ -65,8 +65,6 @@ class SimpleQRDataset(Dataset):
             img = img_f.resize(img,(self.final_size,self.final_size))
         img = (torch.from_numpy(img)[None,...].float()/255)*2 -1
 
-        assert(img.max()==1 and img.min()==-1)
-
         targetchar = torch.LongTensor(17).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]

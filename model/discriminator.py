@@ -7,14 +7,13 @@ from torch.optim.optimizer import Optimizer, required
 from torch import Tensor
 from torch.nn import Parameter
 
-channels = 1
+channels = 3
 leak = 0.1
 #w_g = 4
 
 class HybridDiscriminator(nn.Module):
     def __init__(self, more_low=False,dim=16, global_pool=False):
         super(HybridDiscriminator, self).__init__()
-
         convs1 = []
         if more_low:
             convs1+= [
@@ -25,7 +24,7 @@ class HybridDiscriminator(nn.Module):
                 ]
         else:
             convs1+= [
-                SpectralNorm(nn.Conv2d(channels, dim, 3, stride=1, padding=(1,1))),
+                SpectralNorm(nn.Conv2d(channels, dim, 7, stride=1, padding=(0,0))),
                 nn.LeakyReLU(leak,True),
                 ]
         convs1+= [

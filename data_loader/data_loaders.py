@@ -2,7 +2,7 @@ import torch
 import torch.utils.data
 import numpy as np
 from base import BaseDataLoader
-from datasets import simple_qr_dataset
+from datasets import simple_qr_dataset, image_and_qr_dataset
 
 
 
@@ -31,6 +31,8 @@ def getDataLoader(config,split):
 
         if data_set_name=='SimpleQRDataset':
             return withCollate(simple_qr_dataset.SimpleQRDataset,simple_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        if data_set_name=='ImageAndQRDataset':
+            return withCollate(image_and_qr_dataset.ImageAndQRDataset,image_and_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='FormsLF':
             return basic(FormsLF,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         else:

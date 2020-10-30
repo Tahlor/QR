@@ -3,3 +3,4 @@ from model.simpleNN import SimpleNN
 #from model.rnn_test import Spacer
 #from model.autoencoder import Autoencoder
 from model.decoder_cnn import DecoderCNN
+from model.qr_wraper import QRWraper

@@ -31,7 +31,7 @@ class QRWraper(BaseModel):
         self.vae=False
 
 
-        qr_type= config['qr_net'] #if 'qr_net' in config else 'default'
+        #qr_type= config['qr_net'] #if 'qr_net' in config else 'default'
         #if 'DecoderCNN' in qr_type:
         #    self.qr_net=DecoderCNN(
         #elif 'none' in qr_type:
@@ -50,7 +50,9 @@ class QRWraper(BaseModel):
                 config['qr_config'] = qr_config
             else:
                 qr_config = config['qr_config']
-            model = eval(qr_config['arch'])(qr_config)
+            if 'arch' not in qr_config:
+                qr_config['arch'] = 'DecoderCNN'
+            self.qr_net = eval(qr_config['arch'])(qr_config)
             self.qr_net.load_state_dict( qr_state_dict )
 
         if 'generator' in config and config['generator'] == 'none':
@@ -59,7 +61,7 @@ class QRWraper(BaseModel):
             g_dim = config['gen_dim'] if 'gen_dim' in config else 256
             n_style_trans = config['n_style_trans'] if 'n_style_trans' in config else 6
             down_steps = config['down_steps'] if 'down_steps' in config else 3
-            self.generator = ConvGen(num_class,style_dim,g_dim,down_steps,n_style_trans=n_style_trans)
+            self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans)
         else:
             raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 
