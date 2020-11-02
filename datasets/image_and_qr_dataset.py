@@ -36,7 +36,7 @@ class ImageAndQRDataset(Dataset):
             transform =torchvision.transforms.Compose([
                     torchvision.transforms.RandomCrop([256,256]),
                     torchvision.transforms.RandomHorizontalFlip(),
-                    torchvision.transforms.ColorJitter(0.05,0.05,0.05,0.01)
+                    torchvision.transforms.ColorJitter(0.1,0.1,0.1,0.1)
                     ])
             if split=='valid':
                 split='val'

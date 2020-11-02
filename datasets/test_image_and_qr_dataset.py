@@ -59,17 +59,17 @@ if __name__ == "__main__":
         repeat = int(sys.argv[3])
     else:
         repeat=1
-    data=image_and_qr_dataset.ImageAndQRDataset(dirPath=dirPath,split='val',config={
+    data=image_and_qr_dataset.ImageAndQRDataset(dirPath=dirPath,split='train',config={
         'QR_dataset':{
             'data_set_name': 'SimpleQRDataset',
-		"final_image_size": 256
+		"final_size": 256
             },
         'image_dataset_name': 'LSUN',
         'image_class': 'bedroom'
 })
     #data.cluster(start,repeat,'anchors_rot_{}.json')
 
-    dataLoader = torch.utils.data.DataLoader(data, batch_size=4, shuffle=False, num_workers=0, collate_fn=image_and_qr_dataset.collate)
+    dataLoader = torch.utils.data.DataLoader(data, batch_size=4, shuffle=True, num_workers=0, collate_fn=image_and_qr_dataset.collate)
     dataLoaderIter = iter(dataLoader)
 
         #if start==0:

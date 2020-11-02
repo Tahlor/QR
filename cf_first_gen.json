@@ -15,13 +15,13 @@
 	    "image_class": "church_outdoor",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 16,
-	    "num_workers": 0
+	    "batch_size": 32,
+	    "num_workers": 2
     },
 
     "validation": {
         "shuffle": false,
-        "batch_size": 32
+        "batch_size": 64
     },
 
     
@@ -44,8 +44,8 @@
     },
     "loss_weights": {
 	"char": 1.0,
-	"discriminatorLoss": 1.0,
-	"generatorLoss": 1.0
+	"discriminator": 1.0,
+	"generator": 1.0
 
     },
     "loss_params":
@@ -86,7 +86,7 @@
 	"arch": "QRWraper", 
         "generator": "ConvGen",
         "gen_dim": 16,
-        "down_steps": 3,
+        "down_steps": 4,
         "pretrained_qr": "saved/decode_cnn/checkpoint-latest.pth",
         "discriminator": "hybrid"
       

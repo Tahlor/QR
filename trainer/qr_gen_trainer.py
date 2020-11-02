@@ -227,33 +227,30 @@ class QRGenTrainer(BaseTrainer):
 
         ##tic=timeit.default_timer()
         lesson =  self.curriculum.getLesson(iteration)
-        if all([l[:3]=='gen' or l=='no-step' for l in lesson]) and self.text_data is not None:
-            instance = self.text_data.getInstance()
+        if 'alt-data' in lesson:
+            try:
+                instance = self.alt_data_loader_iter.next()
+            except StopIteration:
+                if 'refresh_data' in dir(self.alt_data_loader.dataset):
+                    self.alt_data_loader.dataset.refresh_data(None,None,self.logged)
+                self.alt_data_loader_iter = iter(self.alt_data_loader)
+                instance = self.alt_data_loader_iter.next()
+        elif self.curriculum and 'triplet-style' in lesson:
+            try:
+                instance = self.triplet_data_loader_iter.next()
+            except StopIteration:
+                if 'refresh_data' in dir(self.triplet_data_loader.dataset):
+                    self.triplet_data_loader.dataset.refresh_data(None,None,self.logged)
+                self.triplet_data_loader_iter = iter(self.triplet_data_loader)
+                instance = self.triplet_data_loader_iter.next()
         else:
-            if 'alt-data' in lesson:
-                try:
-                    instance = self.alt_data_loader_iter.next()
-                except StopIteration:
-                    if 'refresh_data' in dir(self.alt_data_loader.dataset):
-                        self.alt_data_loader.dataset.refresh_data(None,None,self.logged)
-                    self.alt_data_loader_iter = iter(self.alt_data_loader)
-                    instance = self.alt_data_loader_iter.next()
-            elif self.curriculum and 'triplet-style' in lesson:
-                try:
-                    instance = self.triplet_data_loader_iter.next()
-                except StopIteration:
-                    if 'refresh_data' in dir(self.triplet_data_loader.dataset):
-                        self.triplet_data_loader.dataset.refresh_data(None,None,self.logged)
-                    self.triplet_data_loader_iter = iter(self.triplet_data_loader)
-                    instance = self.triplet_data_loader_iter.next()
-            else:
-                try:
-                    instance = self.data_loader_iter.next()
-                except StopIteration:
-                    if 'refresh_data' in dir(self.data_loader.dataset):
-                        self.data_loader.dataset.refresh_data(None,None,self.logged)
-                    self.data_loader_iter = iter(self.data_loader)
-                    instance = self.data_loader_iter.next()
+            try:
+                instance = self.data_loader_iter.next()
+            except StopIteration:
+                if 'refresh_data' in dir(self.data_loader.dataset):
+                    self.data_loader.dataset.refresh_data(None,None,self.logged)
+                self.data_loader_iter = iter(self.data_loader)
+                instance = self.data_loader_iter.next()
         ##toc=timeit.default_timer()
         ##print('data: '+str(toc-tic))
 
@@ -583,7 +580,7 @@ class QRGenTrainer(BaseTrainer):
 
 
     def run(self,instance,lesson,get=[]):
-        qr_image, targetvalid,targetchar = self._to_tensor(instance)
+        qr_image, targetvalid,targetchars = self._to_tensor(instance)
         batch_size = qr_image.size(0)
 
         losses = {}
@@ -611,33 +608,24 @@ class QRGenTrainer(BaseTrainer):
             real = instance['image']
             if self.with_cuda:
                 real = real.to(self.gpu)
-        if 'disc' in lesson:
-            fake = gen_image #could append normal QR images here
-        elif 'sample-disc' in lesson:
+        if 'sample-disc' in lesson:
 
             fake = self.sample_gen(batch_size)
             if fake is None:
                 return None
             fake = fake.to(qr_image.device)
+        else:
+            fake = gen_image #could append normal QR images here
 
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
-            if fake.size(3)>image.size(3):
-                diff = fake.size(3)-image.size(3)
-                image = F.pad(image,(0,diff,0,0),'replicate')
-            elif fake.size(3)<image.size(3):
-                diff = -(fake.size(3)-image.size(3))
-                fake = F.pad(fake,(0,diff,0,0),'replicate')
-                #image = image[:,:,:,:-diff]
-            ##DEBUG
-            #for i in range(batch_size):
-            #    im = ((1-image[i,0])*127).cpu().numpy().astype(np.uint8)
-            #    cv2.imwrite('test/real{}.png'.format(i),im)
-            #for i in range(batch_size):
-            #    im = ((1-fake[i,0])*127).cpu().numpy().astype(np.uint8)
-            #    cv2.imwrite('test/fake{}.png'.format(i),im)
-            #print(lesson)
-            #import pdb;pdb.set_trace()
+            #if fake.size(3)>real.size(3):
+            #    diff = fake.size(3)-real.size(3)
+            #    real = F.pad(real,(0,diff,0,0),'replicate')
+            #elif fake.size(3)<real.size(3):
+            #    diff = -(fake.size(3)-real.size(3))
+            #    fake = F.pad(fake,(0,diff,0,0),'replicate')
+            #    #real = real[:,:,:,:-diff]
 
             discriminator_pred = self.model.discriminator(torch.cat((real,fake),dim=0).detach())
             if self.WGAN:
