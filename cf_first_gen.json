@@ -1,6 +1,6 @@
 {
     "name": "first_gen",
-    "cuda": false,
+    "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
@@ -15,8 +15,8 @@
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 4,
-	    "num_workers": 0
+	    "batch_size": 32,
+	    "num_workers": 2
     },
 
     "validation": {
@@ -44,8 +44,8 @@
     },
     "loss_weights": {
 	"char": 1.0,
-	"discriminatorLoss": 1.0,
-	"generatorLoss": 1.0
+	"discriminator": 1.0,
+	"generator": 1.0
 
     },
     "loss_params":

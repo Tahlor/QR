@@ -73,7 +73,7 @@ class HybridDiscriminator(nn.Module):
         gp = F.adaptive_avg_pool2d(last,1).view(batch_size,-1)
         gp = self.gp_final(gp)
         med = F.adaptive_avg_pool2d(med,1).view(batch_size,-1)
-        return (med+gp)/2
+        return med,gp #the values are returned seperately so the hinge is applied to them individually
 
 class Discriminator(nn.Module):
     def __init__(self):
