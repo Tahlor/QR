@@ -258,6 +258,7 @@ class QRGenTrainer(BaseTrainer):
         ##print('data: '+str(toc-tic))
 
         ##tic=timeit.default_timer()
+        print('{} got data'.format(iteration))
 
         self.optimizer.zero_grad()
         if any(['disc' in l or 'author-train' in l for l in lesson]):
@@ -296,6 +297,7 @@ class QRGenTrainer(BaseTrainer):
             losses = self.run(instance,lesson)
             self.iter_to_print-=1
         pred=None
+        print('{} ran'.format(iteration))
 
         if losses is None:
             return {}
@@ -345,6 +347,7 @@ class QRGenTrainer(BaseTrainer):
             for b_loss in losses_to_balance:
                 loss += b_loss
 
+        print('{} mid grad'.format(iteration))
 
         if type(loss) is not int:
             loss.backward()

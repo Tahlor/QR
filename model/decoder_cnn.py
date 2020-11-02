@@ -42,7 +42,7 @@ class DecoderCNN(BaseModel):
 
 
     def forward(self, x):
-        if x.size(2)!= self.input_size(0):
+        if x.size(2)!= self.input_size[0]:
             x = F.interpolate(x,self.input_size,mode='bilinear')
         batch_size=x.size(0)
         x=self.cnn_layers(x)

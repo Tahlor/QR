@@ -41,6 +41,7 @@ def set_procname(newname):
         libc.prctl(15, byref(buff), 0, 0, 0) #Refer to "#define" of "/usr/include/linux/prctl.h" for the misterious value 16 & arg[3..5] are zero as the man page says.
 
 def main(config, resume):
+    print('main start')
     supercomputer = config['super_computer'] if 'super_computer' in config else False
     #set_procname(config['name'])
     #np.random.seed(1234) I don't have a way of restarting the DataLoader at the same place, so this makes it totaly random
@@ -49,7 +50,7 @@ def main(config, resume):
     split = config['split'] if 'split' in config else 'train'
     data_loader, valid_data_loader = getDataLoader(config,split)
     #valid_data_loader = data_loader.split_validation()
-
+    print('init data')
     model = eval(config['model']['arch'])(config['model'])
     model.summary()
     if config['trainer']['class']=='HWRWithSynthTrainer':
@@ -96,6 +97,7 @@ def main(config, resume):
 
 
 if __name__ == '__main__':
+    print('WHAT?')
     logger = logging.getLogger()
 
     parser = argparse.ArgumentParser(description='PyTorch Template')
@@ -111,6 +113,7 @@ if __name__ == '__main__':
     #                    help='Use combine train and valid sets.')
 
     args = parser.parse_args()
+    print('parsed')
 
     config = None
     if args.config is not None:
@@ -143,6 +146,8 @@ if __name__ == '__main__':
         file_name = file_name[3:-5]
     if name!=file_name:
         raise Exception('ERROR, name and file name do not match, {} != {} ({})'.format(name,file_name,args.config))
+    
+    print('before main')
 
     if args.gpu is not None:
         config['gpu']=args.gpu

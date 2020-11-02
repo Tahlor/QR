@@ -1,10 +1,10 @@
 {
     "name": "first_gen",
-    "cuda": false,
+    "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":false,
+    "super_computer":true,
     "data_loader": {
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
@@ -12,16 +12,16 @@
 		"final_size": 256
 	    },
 	    "image_dataset_name": "LSUN",
-	    "image_class": "bedroom",
+	    "image_class": "church_outdoor",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 4,
+	    "batch_size": 16,
 	    "num_workers": 0
     },
 
     "validation": {
         "shuffle": false,
-        "batch_size": 64
+        "batch_size": 32
     },
 
     
@@ -56,7 +56,7 @@
         "class": "QRGenTrainer",
         "iterations": 200000,
         "save_dir": "saved/",
-        "val_step": 10000,
+        "val_step": 50000,
         "save_step": 10000,
         "save_step_minor": 100,
         "log_step": 100,
@@ -78,7 +78,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/example",
+        "print_dir": "train_out/first",
         "serperate_print_every": 5000,
         "print_every": 100
     },
@@ -86,7 +86,7 @@
 	"arch": "QRWraper", 
         "generator": "ConvGen",
         "gen_dim": 16,
-        "gen_use_skips": 3,
+        "down_steps": 3,
         "pretrained_qr": "saved/decode_cnn/checkpoint-latest.pth",
         "discriminator": "hybrid"
       
