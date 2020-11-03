@@ -5,6 +5,16 @@ import torch.nn.functional as F
 import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage import draw
+from pyzbar.pyzbar import decode as pyzbar_decode
+
+def zbar_decode(img):
+    res=pyzbar_decode(img)
+    if len(res)==0:
+        return None
+    elif len(res)==1:
+        return res[0].data.decode("utf-8")
+    else:
+        return [r.data.decode("utf-8") for r in res]
 
 def ensure_dir(path):
     if not os.path.exists(path):

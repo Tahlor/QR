@@ -1,10 +1,10 @@
 {
-    "name": "first_gen",
+    "name": "first_gen_pixelloss",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":false,
+    "super_computer":true,
     "data_loader": {
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
@@ -40,16 +40,19 @@
         "betas": [0.5,0.999]
     },
     "loss": {
-        "char": "cross_entropy"
+        "char": "cross_entropy",
+        "pixel": "HingeLoss"
     },
     "loss_weights": {
 	"char": 1.0,
 	"discriminator": 1.0,
-	"generator": 1.0
+	"generator": 1.0,
+        "pixel": 0.2
 
     },
     "loss_params":
         {
+            "pixel": {"threshold":0.1}
         },
     "metrics": [],
     "trainer": {
@@ -78,7 +81,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/first",
+        "print_dir": "train_out/first_pixelloss",
         "serperate_print_every": 5000,
         "print_every": 100
     },

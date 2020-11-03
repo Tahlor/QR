@@ -200,6 +200,7 @@ class BaseTrainer:
         Full training logic
         """
         sumLog=defaultdict(lambda:0)
+        countLog=defaultdict(lambda:0)
         sumTime=0
         #for metric in self.metrics:
         #    sumLog['avg_'+metric.__name__]=0
@@ -227,6 +228,7 @@ class BaseTrainer:
 
             elapsed_time = timeit.default_timer() - t
             sumLog['sec_per_iter'] += elapsed_time
+            countLog['sec_per_iter'] += 1
             #print('iter: '+str(elapsed_time))
 
             #Stochastic Weight Averaging    https://github.com/timgaripov/swa/blob/master/train.py
@@ -242,6 +244,7 @@ class BaseTrainer:
                         sumLog['avg_'+metric.__name__] += result['metrics'][i]
                 else:
                     sumLog['avg_'+key] += value
+                    countLog['avg_'+key] += 1
             
             #log prep
             if (    self.iteration%self.log_step==0 or 
@@ -264,12 +267,15 @@ class BaseTrainer:
                 print('                   ', end='\r')
                 if self.iteration-self.start_iteration>=self.log_step: #skip avg if started in odd spot
                     for key in sumLog:
-                        sumLog[key] /= self.log_step
+                        sumLog[key] /= countLog[key]
                     #self._minor_log(sumLog)
                     log = {**log, **sumLog}
                 self._minor_log(log)
-                for key in sumLog:
-                    sumLog[key] =0
+                for key in list(sumLog.keys()):
+                    #sumLog[key] =0
+                    #countLog[key] = 0
+                    del sumLog[key]
+                    del countLog[key]
                 if self.iteration%self.val_step!=0 or self.val_step<0: #we'll do it later if we have a validation pass
                     self.train_logger.add_entry(log)
 

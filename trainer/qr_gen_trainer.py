@@ -255,7 +255,6 @@ class QRGenTrainer(BaseTrainer):
         ##print('data: '+str(toc-tic))
 
         ##tic=timeit.default_timer()
-        print('{} got data'.format(iteration))
 
         self.optimizer.zero_grad()
         if any(['disc' in l or 'author-train' in l for l in lesson]):
@@ -287,14 +286,13 @@ class QRGenTrainer(BaseTrainer):
         #        self.iter_to_print=self.print_every
 
         if self.iter_to_print<=0:
-            losses,got = self.run(instance,lesson,get=['gen'])
-            self.print_images(got['gen'],instance['gt_text'],gtImages=instance['image'],typ='gen')
+            losses,run_log,got = self.run(instance,lesson,get=['gen'])
+            self.print_images(got['gen'],instance['gt_char'],gtImages=instance['qr_image'],typ='gen')
             self.iter_to_print=self.print_every
         else:
-            losses = self.run(instance,lesson)
+            losses,run_log = self.run(instance,lesson)
             self.iter_to_print-=1
         pred=None
-        print('{} ran'.format(iteration))
 
         if losses is None:
             return {}
@@ -344,7 +342,6 @@ class QRGenTrainer(BaseTrainer):
             for b_loss in losses_to_balance:
                 loss += b_loss
 
-        print('{} mid grad'.format(iteration))
 
         if type(loss) is not int:
             loss.backward()
@@ -488,6 +485,7 @@ class QRGenTrainer(BaseTrainer):
 
             #'CER': cer,
             #'WER': wer,
+            **run_log,
             #'meangrad': meangrad,
 
             **metrics,
@@ -535,21 +533,21 @@ class QRGenTrainer(BaseTrainer):
         total_qrLoss=0
         total_autoLoss=0
         total_losses=defaultdict(lambda: 0)
-        total_cer=0
-        total_wer=0
+        total_correct_QR=0
         print('validate')
         with torch.no_grad():
             losses = defaultdict(lambda: 0)
             for batch_idx, instance in enumerate(self.valid_data_loader):
                 if not self.logged:
                     print('validate: {}/{}'.format(batch_idx,len(self.valid_data_loader)), end='\r')
-                losses = self.run(instance,self.curriculum.getValid())
+                losses,run_log = self.run(instance,self.curriculum.getValid())
                 pred=None
             
                 for name in losses.keys():
                     #losses[name] *= self.lossWeights[name[:-4]]
                     total_loss += losses[name].item()*self.lossWeights[name[:-4]]
                     total_losses['val_'+name] += losses[name].item()
+                total_correct_QR+=run_log['correct_QR']
 
                 #if pred is not None:
                 #    pred = pred.detach().cpu().numpy()
@@ -564,6 +562,7 @@ class QRGenTrainer(BaseTrainer):
                 'val_loss': total_loss/len(self.valid_data_loader),
                 #'val_CER': total_cer/len(self.valid_data_loader),
                 #'val_WER': total_wer/len(self.valid_data_loader),
+                'val_correct_QR': total_correct_QR/len(self.valid_data_loader),
                 **total_losses
                 }
         return toRet
@@ -612,7 +611,7 @@ class QRGenTrainer(BaseTrainer):
 
             fake = self.sample_gen(batch_size)
             if fake is None:
-                return None
+                return None,{}
             fake = fake.to(qr_image.device)
         else:
             fake = gen_image #could append normal QR images here
@@ -688,7 +687,21 @@ class QRGenTrainer(BaseTrainer):
         else:
             predicted_disc=None
 
+        if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
+            losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
+        if ('gen' in lesson or 'auto-gen' in lesson):
+            correctly_decoded=0
+
+            for b in range(batch_size):
+                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(2,0,1).numpy())
+                if read==instance['gt_char'][b]:
+                    correctly_decoded+=1
+                #else:
+                #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
+            log={'proper_QR':correctly_decoded/batch_size}
+        else:
+            log={}
 
         if get:
             if (len(get)>1 or get[0]=='style') and 'name' in instance:
@@ -716,9 +729,9 @@ class QRGenTrainer(BaseTrainer):
                     got[name] = predicted_disc
                 else:
                     raise ValueError("Unknown get [{}]".format(name))
-            ret = (losses, got)
+            ret = (losses, log, got)
         else:
-            ret = losses
+            ret = (losses, log)
         #self.model.spaced_label=None
         #self.model.mask=None
         #self.model.gen_mask=None
