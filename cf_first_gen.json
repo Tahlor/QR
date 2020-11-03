@@ -12,7 +12,7 @@
 		"final_size": 256
 	    },
 	    "image_dataset_name": "LSUN",
-	    "image_class": "church_outdoor",
+	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
 	    "batch_size": 32,
