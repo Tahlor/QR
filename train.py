@@ -49,7 +49,6 @@ def main(config, resume):
     split = config['split'] if 'split' in config else 'train'
     data_loader, valid_data_loader = getDataLoader(config,split)
     #valid_data_loader = data_loader.split_validation()
-    print('init data')
     model = eval(config['model']['arch'])(config['model'])
     model.summary()
     if config['trainer']['class']=='HWRWithSynthTrainer':

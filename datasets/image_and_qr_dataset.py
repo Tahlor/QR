@@ -43,12 +43,12 @@ class ImageAndQRDataset(Dataset):
             self.image_dataset = torchvision.datasets.LSUN(dirPath,classes=['{}_{}'.format(config['image_class'],split)],transform=transform)
 
     def __len__(self):
-        return len(self.qr_dataset)*len(self.image_dataset)
+        return max(len(self.qr_dataset),len(self.image_dataset))
 
     def __getitem__(self, idx):
         
-        qr_index = idx%len(self.qr_dataset)
-        image_index = idx//len(self.qr_dataset)
+        qr_index = random.randrange(len(self.qr_dataset))#idx%len(self.qr_dataset)
+        image_index = random.randrange(len(self.image_dataset))#idx//len(self.qr_dataset)
 
         qr_data = self.qr_dataset[qr_index]
         image,target = self.image_dataset[image_index]
