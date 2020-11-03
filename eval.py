@@ -154,7 +154,7 @@ def main(resume,saveDir,numberOfImages,index,gpu=None, shuffle=False, setBatch=N
 
     if checkpoint is not None:
         if 'state_dict' in checkpoint:
-            model = eval(config['arch'])(config['model'])
+            model = eval(config['model']['arch'])(config['model'])
             if config['trainer']['class']=='HWRWithSynthTrainer':
                 model = model.hwr
             if 'style' in config['model'] and 'lookup' in config['model']['style']:

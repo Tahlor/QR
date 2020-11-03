@@ -63,8 +63,10 @@ class SimpleQRDataset(Dataset):
         img = np.array(img)
         if self.final_size is not None:
             img = img_f.resize(img,(self.final_size,self.final_size))
-        img = (torch.from_numpy(img)[None,...].float())*2 -1
-        assert(img.max()<=1)
+        img = torch.from_numpy(img)[None,...].float()
+        if img.max()==255:
+            img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
+        img = img*2 -1
 
         targetchar = torch.LongTensor(17).fill_(0)
         for i,c in enumerate(gt_char):
