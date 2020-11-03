@@ -106,15 +106,15 @@ def imshow(name,img):
 def show(): #replaces cv2.waitKey()
     return io.show()
 
-def resize(img,dim,fx=None,fy=None): #remove ",interpolation = cv2.INTER_CUBIC"
+def resize(img,dim,fx=None,fy=None,degree=3): #remove ",interpolation = cv2.INTER_CUBIC"
     #hasColor = len(img.shape)==3
     if dim[0]==0:
         downsize = fx<1 and fy<1
         
-        return transform.rescale(img,(fy,fx),3,anti_aliasing=downsize,preserve_range=True)
+        return transform.rescale(img,(fy,fx),degree,anti_aliasing=downsize,preserve_range=True)
     else:
         downsize = dim[0]<img.shape[0] and dim[1]<img.shape[1]
-        return transform.resize(img,dim,3,anti_aliasing=downsize,preserve_range=True)
+        return transform.resize(img,dim,degree,anti_aliasing=downsize,preserve_range=True)
 
 def otsuThreshold(img):
     #if len(img.shape)==3 and img.shape[2]==1:
