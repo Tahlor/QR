@@ -43,11 +43,9 @@ class AdaINGen(nn.Module):
 
 
 
-
-
-class QRWraper(BaseModel):
+class QRWrapper(BaseModel):
     def __init__(self, config):
-        super(QRWraper, self).__init__(config)
+        super(QRWrapper, self).__init__(config)
 
         n_downsample = config['style_n_downsample'] if 'style_n_downsample' in config else 3
         input_dim = 1

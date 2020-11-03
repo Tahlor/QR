@@ -11,10 +11,20 @@ dependencies:
   - sqlite
   - tk
   - numpy
+  - pytorch
+  - scikit-learn
+  - cython
+  - matplotlib
   - pip:
     - qrcode
-    - opencv-python
+    - opencv-python==4.3.0.36
     - requests
+    - pillow-simd>=6.0.0
+    - scikit-image
+    - editdistance
+    - torchvision
+    - easydict
+
 
 prefix: /home/taylor/env/anaconda3/envs/qr
 # conda env update -f environment.yaml

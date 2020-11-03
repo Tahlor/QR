@@ -9,9 +9,11 @@ from model import *
 from model.loss import *
 from model.metric import *
 from data_loader import getDataLoader
+from datasets import utils as dataset_utils
 from trainer import *
 from logger import Logger
 import socket
+from pathlib import Path
 
 def update_status(name,message,supercomputer):
     return
@@ -41,6 +43,7 @@ def set_procname(newname):
         libc.prctl(15, byref(buff), 0, 0, 0) #Refer to "#define" of "/usr/include/linux/prctl.h" for the misterious value 16 & arg[3..5] are zero as the man page says.
 
 def main(config, resume):
+    config = dataset_utils.make_config_consistent(config)
     supercomputer = config['super_computer'] if 'super_computer' in config else False
     #set_procname(config['name'])
     #np.random.seed(1234) I don't have a way of restarting the DataLoader at the same place, so this makes it totaly random
@@ -59,7 +62,7 @@ def main(config, resume):
         model = model.hwr
         gen_model.hwr=None
         #config['gen_model$'] = gen_model
-    if type(config['loss'])==dict:
+    if isinstance(config['loss'], dict):
         loss={}#[eval(l) for l in config['loss']]
         for name,l in config['loss'].items():
             loss[name]=eval(l)
@@ -132,17 +135,15 @@ if __name__ == '__main__':
             directory = os.fsencode(path)
             for file in os.listdir(directory):
                 filename = os.fsdecode(file)
-                if 'checkpoint' in filename: 
+                if 'checkpoint' in filename and ("overwrite" not in config.keys() or not config["overwrite"]):
                     assert False, "Path {} already used!".format(path)
     assert config is not None
     supercomputer = config['super_computer'] if 'super_computer' in config else False
 
     name=config['name']
     file_name = args.config
-    if '/' in file_name:
-        file_name = file_name[file_name.rindex('/')+4:-5] #remove path
-    else:
-        file_name = file_name[3:-5]
+    file_name = Path(file_name).stem[3:]
+
     if name!=file_name:
         raise Exception('ERROR, name and file name do not match, {} != {} ({})'.format(name,file_name,args.config))
 

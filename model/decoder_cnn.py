@@ -43,6 +43,6 @@ class DecoderCNN(BaseModel):
     def forward(self, x):
         batch_size=x.size(0)
         x=self.cnn_layers(x)
-        x=x.view(batch_size,-1)
+        x=x.view(batch_size,-1) # 32 x 262144 vs 32x246016
         out= self.fc_layers(x)
         return out[:,0], out[:,1:].view(batch_size,-1,self.num_char_class)

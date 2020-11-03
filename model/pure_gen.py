@@ -371,7 +371,7 @@ class Blur(nn.Module):
         # return F.conv2d(input, self.weight, padding=1, groups=input.shape[1])
 
 
-class StyledConvBlock(nn.Module):
+                    class StyledConvBlock(nn.Module):
     def __init__(
         self,
         in_channel,
