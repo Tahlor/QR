@@ -2,25 +2,32 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .pure_gen import StyledConvBlock, PixelNorm, EqualConv2d
+from .pure_gen import StyledConvBlock, PixelNorm, EqualConv2d, ArgTwoId
 
 class ConvGen(nn.Module):
-    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6):
+    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6,all_style=False):
         super(ConvGen, self).__init__()
         fused=True
+        self.all_style=all_style
 
         self.down_convs = nn.ModuleList()
         for i in range(down_steps):
             dim*=2
-            self.down_convs.append( nn.Sequential(
-                    nn.MaxPool2d(2), 
-                    nn.Conv2d(dim//2,dim,3,padding=1),
-                    nn.BatchNorm2d(dim),
-                    nn.LeakyReLU(0.1),
-                    nn.Conv2d(dim,dim,3,padding=1),
-                    nn.BatchNorm2d(dim),
-                    nn.LeakyReLU(0.1)
-                    ))
+            if all_style:
+                self.down_convs.append( nn.Sequential(
+                        ArgTwoId(nn.MaxPool2d(2)),
+                        StyledConvBlock(dim//2,dim,fused=fused,style_dim=style_size)
+                        ))
+            else:
+                self.down_convs.append( nn.Sequential(
+                        nn.MaxPool2d(2), 
+                        nn.Conv2d(dim//2,dim,3,padding=1),
+                        nn.BatchNorm2d(dim),
+                        nn.LeakyReLU(0.1),
+                        nn.Conv2d(dim,dim,3,padding=1),
+                        nn.BatchNorm2d(dim),
+                        nn.LeakyReLU(0.1)
+                        ))
         self.up_convs = nn.ModuleList()
         for i in range(down_steps):
             self.up_convs.append( nn.Sequential(
@@ -57,7 +64,10 @@ class ConvGen(nn.Module):
         prev_xs=[]
         for down_conv in self.down_convs:
             prev_xs.append(x)
-            x = down_conv(x)
+            if self.all_style:
+                x,_ = down_conv((x,style))
+            else:
+                x = down_conv(x)
         y,_ = self.up_convs[0]((x,style))
         #for i in range(len(self.up_convs)-2,-1,-1):
         #    y,_ = self.up_convs[i]((torch.cat([prev_xs[i],y],dim=1),style))

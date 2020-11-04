@@ -8,6 +8,15 @@ from torch.autograd import Function
 from math import sqrt
 import random
 
+class ArgTwoId(nn.Module):
+    def __init__(self,module):
+        super(ArgTwoId,self).__init__()
+        self.module=module
+    def forward(self,x):
+        x,y = x
+        x=self.module(x)
+        return x,y
+
 class PureGenerator(nn.Module):
     def __init__(self, n_class, style_size, dim=256, output_dim=1, n_style_trans=6,depth1=3,depth2=2):
         super(PureGenerator, self).__init__()

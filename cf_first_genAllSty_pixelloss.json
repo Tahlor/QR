@@ -1,0 +1,100 @@
+{
+    "name": "first_genAllSty_pixelloss",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+	    "data_set_name": "ImageAndQRDataset",
+	    "QR_dataset": {
+		"data_set_name": "SimpleQRDataset",
+		"final_size": 256
+	    },
+	    "image_dataset_name": "LSUN",
+	    "image_class": "bedroom",
+	    "data_dir": "../data/LSUN",
+	    "shuffle": true,
+	    "batch_size": 32,
+	    "num_workers": 2
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "loss": {
+        "char": "cross_entropy",
+        "pixel": "HingeLoss"
+    },
+    "loss_weights": {
+	"char": 1.0,
+	"discriminator": 1.0,
+	"generator": 1.0,
+        "pixel": 0.2
+
+    },
+    "loss_params":
+        {
+            "pixel": {"threshold":0.1}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "QRGenTrainer",
+        "iterations": 200000,
+        "save_dir": "saved/",
+        "val_step": 50000,
+        "save_step": 10000,
+        "save_step_minor": 100,
+        "log_step": 200,
+        "verbosity": 1,
+        "monitor": "loss",
+
+	"freeze_param_names": ["qr_net"],
+        "slow_param_names": ["keys"],
+        "curriculum": {
+            "0": [     
+                        ["gen"],
+                        ["disc"]
+                    ]
+        },
+        "new_gen_freq": 0.8,
+        "forget_new_freq": 0.95,
+        "balance_loss": "sign_preserve_var",
+        "balance_var_x": {"0":[1.0]},
+
+        "use_learning_schedule": false,
+
+        "print_dir": "train_out/first_allSty_pixelloss",
+        "serperate_print_every": 5000,
+        "print_every": 100
+    },
+    "model": {
+	"arch": "QRWraper", 
+        "generator": "ConvGen",
+        "all_style": true,
+        "gen_dim": 16,
+        "down_steps": 4,
+        "pretrained_qr": "saved/decode_cnn/checkpoint-latest.pth",
+        "discriminator": "hybrid"
+      
+
+
+    }
+}

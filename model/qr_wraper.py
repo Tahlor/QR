@@ -61,7 +61,8 @@ class QRWraper(BaseModel):
             g_dim = config['gen_dim'] if 'gen_dim' in config else 256
             n_style_trans = config['n_style_trans'] if 'n_style_trans' in config else 6
             down_steps = config['down_steps'] if 'down_steps' in config else 3
-            self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans)
+            all_style = config['all_style'] if 'all_style' in config else False
+            self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans,all_style=all_style)
         else:
             raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 
