@@ -415,7 +415,7 @@ class QRGenTrainer(BaseTrainer):
                         elif self.balance_loss.startswith('sign_preserve_x'):
                             abmean_R = torch.abs(R).mean()
                             if abmean_R!=0:
-                                p.grad += self.balance_x*R*(abmean_Ds[i]/abmean_R)
+                                p.grad += self.balance_x*R*(abmean_Ds[i]/(abmean_R+1e-40))
                         elif self.balance_loss=='orig':
                             if R.nelement()>16:
                                 mean_D = p.grad.mean()
@@ -595,8 +595,13 @@ class QRGenTrainer(BaseTrainer):
         if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson:
             gen_valid,gen_chars = self.model.qr_net(gen_image)
             losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+            #assert(losses['charLoss']!=0)
+            if losses['charLoss']<0.0001:
+                del losses['charLoss']
             if 'valid' in self.loss:
                 losses['validLoss'] = self.loss['valid'](gen_valid,targetvalid,*self.loss_params['valid'])
+                if losses['validLoss']<0.0001:
+                    del losses['validLoss']
             #gen_qrLoss = self.loss['QR'](gen_pred,label)
             #losses['QRLoss'] = gen_qrLoss
 
