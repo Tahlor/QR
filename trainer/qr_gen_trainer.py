@@ -533,7 +533,7 @@ class QRGenTrainer(BaseTrainer):
         total_qrLoss=0
         total_autoLoss=0
         total_losses=defaultdict(lambda: 0)
-        total_correct_QR=0
+        total_proper_QR=0
         print('validate')
         with torch.no_grad():
             losses = defaultdict(lambda: 0)
@@ -547,7 +547,7 @@ class QRGenTrainer(BaseTrainer):
                     #losses[name] *= self.lossWeights[name[:-4]]
                     total_loss += losses[name].item()*self.lossWeights[name[:-4]]
                     total_losses['val_'+name] += losses[name].item()
-                total_correct_QR+=run_log['correct_QR']
+                total_proper_QR+=run_log['proper_QR']
 
                 #if pred is not None:
                 #    pred = pred.detach().cpu().numpy()
@@ -562,7 +562,7 @@ class QRGenTrainer(BaseTrainer):
                 'val_loss': total_loss/len(self.valid_data_loader),
                 #'val_CER': total_cer/len(self.valid_data_loader),
                 #'val_WER': total_wer/len(self.valid_data_loader),
-                'val_correct_QR': total_correct_QR/len(self.valid_data_loader),
+                'val_proper_QR': total_proper_QR/len(self.valid_data_loader),
                 **total_losses
                 }
         return toRet
@@ -695,7 +695,7 @@ class QRGenTrainer(BaseTrainer):
         if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
             losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
-        if ('gen' in lesson or 'auto-gen' in lesson):
+        if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
             correctly_decoded=0
 
             for b in range(batch_size):

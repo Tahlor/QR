@@ -29,9 +29,8 @@ class Curriculum:
                             if 'sample-disc' in a:
                                 self.sample_disc=True
                             new_lesson.append(a)
-                            if 'gen' not in a and 'disc' not in a and a!='split-style' and 'triplet' not in a: #as GAN losses aren't too informative...
+                            if 'disc' not in a and a!='split-style' and 'triplet' not in a: #as GAN losses aren't too informative...
                                 self.valid.add(a)
-                            if 'disc' not in a and a!='split-style' and 'triplet' not in a: 
                                 self.eval.add(a)
                         elif type(a) is int:
                             dup=a
