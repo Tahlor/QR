@@ -15,7 +15,7 @@
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 32,
+	    "batch_size": 30,
 	    "num_workers": 2
     },
 

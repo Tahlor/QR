@@ -173,8 +173,8 @@ class QRDecoderTrainer(BaseTrainer):
         outvalid, outchars = self.model(image)
         batch_size = image.size(0)
         losses={}
-        #losses['charLoss'] = self.loss['char'](outchars,targetchars,*self.loss_params['char'])
-        losses['charLoss'] = self.loss['char'](outchars.reshape(batch_size*outchars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+        charLoss = self.loss['char'](outchars.reshape(batch_size*outchars.size(1),-1),targetchars.view(-1),*self.loss_params['char'],reduction='none')
+        losses['charLoss'] = (charLoss.view(batch_size,-1)*targetvalid[:,None]).mean() #only use loss of valid QR imagse
         if 'valid' in self.loss:
             losses['validLoss'] = self.loss['valid'](outvalid,targetvalid,*self.loss_params['valid'])
 
