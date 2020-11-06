@@ -54,6 +54,8 @@ class QRWraper(BaseModel):
                 qr_config['arch'] = 'DecoderCNN'
             self.qr_net = eval(qr_config['arch'])(qr_config)
             self.qr_net.load_state_dict( qr_state_dict )
+        else:
+            self.qr_net = None
 
         if 'generator' in config and config['generator'] == 'none':
             self.generator = None

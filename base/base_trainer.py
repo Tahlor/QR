@@ -70,7 +70,7 @@ class BaseTrainer:
                             freeze=True
                             break
                     if freeze:
-                        pass
+                        pass #simply don't pass them to the optimizer
                     elif 'discriminator' in name:
                         discriminator_params.append(param)
                     elif fix_author_classifer and 'author_classifier' in name:
@@ -91,7 +91,7 @@ class BaseTrainer:
                             gen_only_params.append(param)
                         if 'style_extractor' in name:
                             style_ex_only_params.append(param)
-            to_opt = [{'params': main_params}, {'params': slow_params, 'lr': config['optimizer']['lr']*0.1}]
+            to_opt = [{'params': main_params}, {'params': slow_params, 'lr': config['optimizer']['lr']*0.01}]
             self.optimizer = getattr(optim, config['optimizer_type'])(to_opt,
                                                                       **config['optimizer'])
             if len(discriminator_params)>0:
@@ -100,11 +100,11 @@ class BaseTrainer:
             else:
                 self.optimizer_discriminator = None
             if self.curriculum is not None and self.curriculum.need_sep_gen_opt:
-                to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.1}]
+                to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
                 self.optimizer_gen_only = getattr(optim, config['optimizer_type'])(to_opt,
                                                                           **config['optimizer'])
             if self.curriculum is not None and self.curriculum.need_sep_style_ex_opt:
-                to_opt = [{'params': style_ex_only_params}, {'params': style_ex_only_slow_params, 'lr': config['optimizer']['lr']*0.1}]
+                to_opt = [{'params': style_ex_only_params}, {'params': style_ex_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
                 self.optimizer_style_ex_only = getattr(optim, config['optimizer_type'])(to_opt,
                                                                           **config['optimizer'])
 
