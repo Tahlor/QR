@@ -4,7 +4,7 @@
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":false,
+    "super_computer":true,
     "data_loader": {
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
@@ -15,7 +15,7 @@
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 32,
+	    "batch_size": 30,
 	    "num_workers": 2
     },
 
@@ -78,7 +78,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/first",
+        "print_dir": "train_out/first_noDecode",
         "serperate_print_every": 5000,
         "print_every": 100
     },
@@ -86,7 +86,7 @@
 	"arch": "QRWraper", 
         "generator": "ConvGen",
         "gen_dim": 16,
-        "down_steps": 4,
+        "down_steps": 5,
         "pretrained_qr": "saved/decode_cnn/checkpoint-latest.pth",
         "discriminator": "hybrid"
       

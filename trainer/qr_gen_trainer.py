@@ -631,7 +631,7 @@ class QRGenTrainer(BaseTrainer):
             #    fake = F.pad(fake,(0,diff,0,0),'replicate')
             #    #real = real[:,:,:,:-diff]
 
-            discriminator_pred = self.model.discriminator(torch.cat((real,fake),dim=0).detach())
+            discriminator_pred = self.model.discriminator(torch.cat((real,fake),dim=0).detach(),True)
             if self.WGAN:
                 #Improved W-GAN
                 assert(len(discriminator_pred)==1)
@@ -670,7 +670,7 @@ class QRGenTrainer(BaseTrainer):
 
         if ('gen' in lesson or 'auto-gen' in lesson) and 'eval' not in lesson:
             #WHERE GENERATOR LOSS IS COMPUTED
-            gen_pred = self.model.discriminator(fake)
+            gen_pred = self.model.discriminator(fake,False)
             gen_loss=0
             predicted_disc=[]
             if self.DCGAN:

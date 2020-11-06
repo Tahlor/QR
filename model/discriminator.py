@@ -11,9 +11,23 @@ channels = 3
 leak = 0.1
 #w_g = 4
 
+def minibatchStat(data,split=False): #from progressive growing of GANs
+    if split:
+        data_1, data_2 = data.chunk(2,dim=0) #divide real and fake images to keep stats different
+        data_1 = minibatchStat(data_1)
+        data_2 = minibatchStat(data_2)
+        return torch.cat((data_1,data_2),dim=0)
+    else:
+        data_std = torch.sqrt(data.var(0, unbiased=False) + 1e-8)
+        mean_std = data_std.mean()
+        mean_std = mean_std.expand(data.size(0), 1, 4, 4)
+        data = torch.cat([data, mean_std], 1)
+        return data
+
 class HybridDiscriminator(nn.Module):
-    def __init__(self, more_low=False,dim=16, global_pool=False):
+    def __init__(self, more_low=False,dim=16, global_pool=False,use_minibatch_stat=False):
         super(HybridDiscriminator, self).__init__()
+        self.use_minibatch_stat=use_minibatch_stat
         convs1 = []
         if more_low:
             convs1+= [
@@ -49,25 +63,35 @@ class HybridDiscriminator(nn.Module):
 
 
         self.convs1 = nn.Sequential(*convs1)
-        self.convs2 = nn.Sequential(
+        self.convs2 = [#nn.Sequential(
                 SpectralNorm(nn.Conv2d(8*dim, 16*dim, 4, stride=2, padding=(0,0))),
                 nn.LeakyReLU(leak,True),
+                ]
+        convs3 = [
                 SpectralNorm(nn.Conv2d(16*dim, 16*dim, 3, stride=1, padding=(0,0))),
                 nn.Dropout2d(0.05,True),
                 nn.LeakyReLU(leak,True),
                 SpectralNorm(nn.Conv2d(16*dim, 16*dim, 4, stride=2, padding=(0,0))),
                 nn.Dropout2d(0.05,True),
                 nn.LeakyReLU(leak,True),
-                )
+                ]
+        if not self.use_minibatch_stat:
+            self.convs2 = nn.Sequential(*self.convs2,*convs3)
+        else:
+            self.convs2 = nn.Sequential(*self.convs2)
+            self.convs3 = nn.Sequential(*convs3)
         self.finalMed = nn. Sequential(
                 SpectralNorm(nn.Conv2d(8*dim, 1, 1, stride=1, padding=(0,0))),
                 )
         self.gp_final = nn.Linear(16*dim,1)
 
 
-    def forward(self, x):
+    def forward(self, x,split):
         med = self.convs1(x)
         last = self.convs2(med)
+        if self.use_minibatch_stat:
+            last = minibatchStat(last,split)
+            last = self.convs3(last)
         med = self.finalMed(med)
         batch_size = x.size(0)
         gp = F.adaptive_avg_pool2d(last,1).view(batch_size,-1)
