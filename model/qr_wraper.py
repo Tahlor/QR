@@ -85,7 +85,8 @@ class QRWraper(BaseModel):
             elif 'simple' in config['discriminator']:
                 self.discriminator=SimpleDisc()
             elif 'hybrid' in config['discriminator']:
-                self.discriminator=HybridDiscriminator()
+                use_minibatch_stat = config['disc_use_minibatch_stat'] if 'disc_use_minibatch_stat' in config else False
+                self.discriminator=HybridDiscriminator(use_minibatch_stat=use_minibatch_stat)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 
