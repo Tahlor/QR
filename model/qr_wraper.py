@@ -62,7 +62,9 @@ class QRWraper(BaseModel):
             n_style_trans = config['n_style_trans'] if 'n_style_trans' in config else 6
             down_steps = config['down_steps'] if 'down_steps' in config else 3
             all_style = config['all_style'] if 'all_style' in config else False
-            self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans,all_style=all_style)
+            skip_connections = not config['no_gen_skip'] if 'no_gen_skip' in config else True
+            diff_gen = not config['no_diff_gen'] if 'no_diff_gen' in config else True
+            self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans,all_style=all_style,skip_connections=skip_connections,diff_gen=diff_gen)
         else:
             raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 

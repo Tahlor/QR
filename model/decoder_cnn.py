@@ -8,7 +8,7 @@ class DecoderCNN(BaseModel):
         super(DecoderCNN, self).__init__(config)
         
         cnn_layer_specs = config['cnn_layer_specs']
-        self.cnn_layers, ch_last = make_layers(cnn_layer_specs,dropout=True,norm='batch')
+        self.cnn_layers, ch_last = make_layers(cnn_layer_specs,dropout=True,norm='batch_norm')
 
         input_size = config['input_size']
         if type(input_size) is int:

@@ -5,10 +5,12 @@ import torch.nn.functional as F
 from .pure_gen import StyledConvBlock, PixelNorm, EqualConv2d, ArgTwoId
 
 class ConvGen(nn.Module):
-    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6,all_style=False):
+    def __init__(self, style_size, dim=16, down_steps=4, n_style_trans=6,all_style=False,skip_connections=True,diff_gen=True):
         super(ConvGen, self).__init__()
         fused=True
         self.all_style=all_style
+        self.skip_connections=skip_connections
+        self.diff_gen = diff_gen
 
         self.down_convs = nn.ModuleList()
         for i in range(down_steps):
@@ -31,11 +33,11 @@ class ConvGen(nn.Module):
         self.up_convs = nn.ModuleList()
         for i in range(down_steps):
             self.up_convs.append( nn.Sequential(
-                    StyledConvBlock(2*dim if i!=0 else dim,dim,upsample=False,style_dim=style_size),
+                    StyledConvBlock(2*dim if i!=0 and skip_connections else dim,dim,upsample=False,style_dim=style_size),
                     StyledConvBlock(dim,dim//2,upsample=True,fused=fused,style_dim=style_size)
                     ))
             dim=dim//2
-        self.up_convs.append(StyledConvBlock(2*dim,dim,upsample=False,style_dim=style_size))
+        self.up_convs.append(StyledConvBlock(2*dim if skip_connections else dim,dim,upsample=False,style_dim=style_size))
 
         self.in_conv = nn.Sequential(
                 nn.Conv2d(1,dim,7,padding=3),
@@ -73,8 +75,13 @@ class ConvGen(nn.Module):
         #    y,_ = self.up_convs[i]((torch.cat([prev_xs[i],y],dim=1),style))
         prev_xs.reverse()
         for up_conv,x in zip(self.up_convs[1:],prev_xs):
-            y,_ = up_conv((torch.cat([x,y],dim=1),style))
+            if self.skip_connections:
+                y,_ = up_conv((torch.cat([x,y],dim=1),style))
+            else:
+                y,_ = up_conv((y,style))
         y = self.out_conv(y)
-
-        return y+qr_img
+        if self.diff_gen:
+            return y+qr_img
+        else:
+            return y
 
