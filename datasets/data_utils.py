@@ -1,3 +1,7 @@
+from pyzbar.pyzbar import decode as pyzbar_decode
+
+import os
+from pathlib import Path
 from scipy import ndimage
 import numpy as np
 import cv2
@@ -67,13 +71,81 @@ def make_config_consistent(config):
             warnings.warn("Alphabet and alphabet description specified, using alphabet_description")
         config.data_loader.alphabet = create_alphabet(config.data_loader.alphabet_description)
 
-    alphabet_length = len(set(config.data_loader.alphabet)) + 1
+    alphabet_length = len(set(config.data_loader.alphabet)) + 1 if "alphabet" in config.data_loader else 11
+
     if "num_char_class" in config.model and config.model.num_char_class != alphabet_length:
         warnings.warn(f"num_char_class incorrect, using {alphabet_length}")
         config.model.num_char_class = alphabet_length
+    if "final_size" in config.data_loader:
+        config.data_loader.image_size = [config.data_loader.final_size]*2
+    elif "image_size" in config.data_loader:
+        config.data_loader.final_size = config.data_loader.image_size[0]
+
+    config.full_path = os.path.join(config['trainer']['save_dir'], config['name'])
+
+    (Path(config.full_path) / "images").mkdir(exist_ok=True, parents=True)
     print(config.model)
     print(config.data_loader)
     return config
+
+class Occlude(object):
+    def __init__(self, p=0.5, s_min=0.02, s_max=0.04, r_min=0.3):
+        self.p = p  # erasing probability
+        self.s_min = s_min
+        self.s_max = s_max
+        self.r_min = r_min
+        self.r_max = 1./r_min
+
+    def __call__(self, tensor):
+        if np.random.uniform() > self.p:
+            return tensor
+        while True:
+            Se = np.random.uniform(self.s_min,self.s_max) * 32 * 32
+            re = np.random.uniform(self.r_min, self.r_max)
+            He, We = np.sqrt(Se * re), np.sqrt(Se/re)
+            xe, ye = np.random.uniform(0,32), np.random.uniform(0,32)
+            if int(xe + We) <= 32 and int(ye + He) <= 32:
+                tensor[:, int(ye):int(ye + He), int(xe):int(xe + We)].fill(np.random.uniform()*2-1)
+                return tensor
+
+def qr_decode(img):
+    """ img: uint8, 0-255
+
+    Args:
+        img:
+
+    Returns:
+
+    """
+    res=pyzbar_decode(img)
+    if len(res)==0:
+        return None
+    else:
+        return res[0].data.decode("utf-8")
+
+def occlude(img):
+    # p=0.95
+    # s_min=0.02
+    # s_max=0.04
+    # r_min=0.3
+    # r_max = 1./r_min
+    # size = 64
+    # if np.random.uniform() > p:
+    #     return tensor
+    # while True:
+    #     Se = np.random.uniform(s_min,s_max) * size * size
+    #     re = np.random.uniform(r_min, r_max)
+    #     He, We = np.sqrt(Se * re), np.sqrt(Se/re)
+    #     xe, ye = np.random.uniform(0,size), np.random.uniform(0,size)
+    #     if int(xe + We) <= size and int(ye + He) <= size:
+    #         tensor[:, int(ye):int(ye + He), int(xe):int(xe + We)].fill(np.random.uniform()*2-1)
+    #         return tensor
+    w = np.random.randint(int(img.shape[0]/3))
+    h = np.random.randint(int(img.shape[1]/3))
+    x1 = np.random.randint(img.shape[0]-w)
+    y1 = np.random.randint(img.shape[1]-h)
+    img[x1:x1 + w, y1:y1+h] = np.random.uniform(0, 255, [w,h])
+    return img
 
 def img2tensor(img):
     return (torch.from_numpy(np.asarray(img))[None, ...].float() / 255) * 2 - 1
@@ -99,24 +171,26 @@ def gaussian_noise(img, max_intensity=10, logger=None):
     noisy_img = np.clip(img + noise_mask, 0, 255)
     return noisy_img.astype(int)
 
-def superimpose_images(img1, img2, img2_wt=.5):
+def superimpose_images(img1, img2, img2_wt=None):
     """
 
     Args:
-        img1 (nd-array):
-        img2 (nd-array):
+        img1 (nd-array): QR code
+        img2 (nd-array): background image
         img2_wt:
 
     Returns:
 
     """
+    if img2_wt is None:
+        img2_wt = np.clip(np.random.randn()/3+.2,0,.9)
     if isinstance(img2, str):
-        img2 = cv2.imread(img2)
-
+        img2 = np.array(cv2.imread(img2)).astype(np.uint8)*255
+    #print(img1.shape, img1.dtype, img2.shape, img2.dtype)
     y,x,c = img1.shape
     #cropped = img2[:x,:y,:]
-    img2 = cv2.resize(img2, (x,y))
-    added_image = cv2.addWeighted(img2, 1-img2_wt, img1, img2_wt, 0)
+    img2 = cv2.resize(img2, (x,y))[:,:,np.newaxis]
+    added_image = cv2.addWeighted(img2, img2_wt, img1, 1-img2_wt, 0)
     return added_image
 
 

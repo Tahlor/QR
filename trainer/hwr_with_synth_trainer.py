@@ -85,7 +85,7 @@ class HWRWithSynthTrainer(BaseTrainer):
             return {}
 
 
-    def _train_iteration(self, iteration):
+    def _train_iteration(self, iteration, *args, **kwargs):
         """
         Training logic for an iteration
 

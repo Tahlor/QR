@@ -10,6 +10,9 @@ from utils.util import ensure_dir
 from collections import defaultdict
 from utils.curriculum import Curriculum
 from model import *
+#import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
+from pathlib import Path
 #from ..model import PairingGraph
 
 class BaseTrainer:
@@ -195,6 +198,14 @@ class BaseTrainer:
         if 'debug' in config and config['debug']:
             torch.autograd.set_detect_anomaly(True)
 
+    def save_image(self, name, img):
+        # plt.imshow(img, cmap="gray")
+        # plt.imsave()
+        img_path = (Path(self.checkpoint_dir) / "images") #.mkdir(exist_ok=True, parents=True)
+
+        img = Image.fromarray(img, 'L')
+        img.save(img_path / (name + ".JPEG"))
+
     def train(self):
         """
         Full training logic
@@ -213,9 +224,10 @@ class BaseTrainer:
             lastErr=None
             if self.useLearningSchedule:
                 self.lr_schedule.step()
+
             #for attempt in range(self.retry_count):
             #    try:
-            result = self._train_iteration(self.iteration)
+            result = self._train_iteration(self.iteration, log_step=(self.iteration%self.log_step==0))
             #        break
             #    except RuntimeError as err:
             #        torch.cuda.empty_cache() #this is primarily to catch rare CUDA out of memory errors
@@ -240,7 +252,7 @@ class BaseTrainer:
                 if key == 'metrics':
                     for i, metric in enumerate(self.metrics):
                         sumLog['avg_'+metric.__name__] += result['metrics'][i]
-                else:
+                elif key != "images":
                     sumLog['avg_'+key] += value
             
             #log prep
@@ -255,7 +267,7 @@ class BaseTrainer:
                     if key == 'metrics':
                         for i, metric in enumerate(self.metrics):
                             log[metric.__name__] = result['metrics'][i]
-                    else:
+                    elif key!="images":
                         log[key] = value
 
             #LOG
@@ -272,6 +284,14 @@ class BaseTrainer:
                     sumLog[key] =0
                 if self.iteration%self.val_step!=0 or self.val_step<0: #we'll do it later if we have a validation pass
                     self.train_logger.add_entry(log)
+
+                if "images" in result and result["images"]:
+                    # Save an image
+                    image_data = result["images"]
+                    for i,img in enumerate(image_data["data"]):
+                        name = image_data["target"][i]
+                        img = img[i].cpu().detach().numpy()
+                        self.save_image(name, img)
 
             #VALIDATION
             if self.iteration%self.val_step==0 and self.val_step>0:
@@ -325,7 +345,7 @@ class BaseTrainer:
 
             
 
-    def _train_iteration(self, iteration):
+    def _train_iteration(self, iteration, *args, **kwargs):
         """
         Training logic for a single iteration
 

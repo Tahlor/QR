@@ -2,9 +2,7 @@ import torch
 import torch.utils.data
 import numpy as np
 from base import BaseDataLoader
-from datasets import simple_qr_dataset, advanced_qr_dataset
-
-
+from datasets import simple_qr_dataset, advanced_qr_dataset, simple_qr_dataset2
 
 def getDataLoader(config,split):
         data_set_name = config['data_loader']['data_set_name']
@@ -29,8 +27,10 @@ def getDataLoader(config,split):
             numDataWorkers = 1
         shuffleValid = config['validation']['shuffle']
 
-        if data_set_name=='SimpleQRDataset':
+        if data_set_name =='SimpleQRDataset':
             return withCollate(simple_qr_dataset.SimpleQRDataset,simple_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+        if data_set_name =='SimpleQRDataset2':
+            return withCollate(simple_qr_dataset2.SimpleQRDataset2,simple_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='FormsLF':
             return basic(FormsLF,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=="AdvancedQRDataset":

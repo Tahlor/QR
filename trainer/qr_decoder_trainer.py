@@ -65,7 +65,7 @@ class QRDecoderTrainer(BaseTrainer):
                 acc_metrics[i] += metric(output, target)
         return acc_metrics
 
-    def _train_iteration(self, iteration):
+    def _train_iteration(self, iteration, log_step=None):
         """
         Training logic for an iteration
 
@@ -87,8 +87,9 @@ class QRDecoderTrainer(BaseTrainer):
         #tic=timeit.default_timer()
         #batch_idx = (iteration-1) % len(self.data_loader)
         try:
-            losses,run_log,out = self.run(self.data_loader_iter.next())
-            
+            next_item = self.data_loader_iter.next()
+            losses,run_log,out = self.run(next_item)
+
             #data, target = self._to_tensor(*self.data_loader_iter.next())
         except StopIteration:
             self.data_loader_iter = iter(self.data_loader)
@@ -96,7 +97,7 @@ class QRDecoderTrainer(BaseTrainer):
             #data, target = self._to_tensor(*self.data_loader_iter.next())
         #toc=timeit.default_timer()
         #print('data: '+str(toc-tic))
-        
+
         #tic=timeit.default_timer()
         loss=0
         for name in losses.keys():
@@ -123,6 +124,8 @@ class QRDecoderTrainer(BaseTrainer):
 
         log = {
             'loss': loss,
+            'images': {"data": next_item["image"],
+                       "target": next_item["gt_char"]} if log_step else None,
             #'metrics': metrics,
            **losses,
            **run_log
@@ -198,13 +201,13 @@ class QRDecoderTrainer(BaseTrainer):
             s=''
             for p in range(outchars.size(1)):
                 if char_indexes[b,p].item()>0: #skip the null character
-                    s+=self.data_loader.dataset.index_to_char[char_indexes[b,p].item()]
+                    s+=self.data_loader.dataset.index_to_char[char_indexes[b, p].item()]
                 #else:
                 #    s+='N'
             chars.append(s)
-            
+
             b_cer += cer(s,gt_chars[b])
-            
+
         acc = torch.logical_and(outvalid>0,targetvalid>0).float().mean()
         #print(chars)
         #import pdb;pdb.set_trace()
@@ -212,6 +215,41 @@ class QRDecoderTrainer(BaseTrainer):
                 'cer':b_cer/batch_size,
                 'valid_acc':acc
                 }
-                
+
 
         return losses,log,chars
+
+    def run2(self, instance): # OLD ONE
+        image, targetvalid, targetchars = self._to_tensor(instance)
+        gt_chars = instance['gt_char']
+        outvalid, outchars = self.model(image)
+        losses = {}
+        batch_size = image.size(0)
+        losses['charLoss'] = self.loss['char'](outchars, targetchars, *self.loss_params['char'])
+        #losses['charLoss'] = self.loss['char'](outchars.reshape(batch_size*outchars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+
+        if 'valid' in self.loss:
+            losses['validLoss'] = self.loss['valid'](outvalid, targetvalid, *self.loss_params['valid'])
+
+        chars = []
+        char_indexes = outchars.argmax(dim=1)
+        #char_indexes = outchars.argmax(dim=2) # BATCH, LEN, VOCAB
+        batch_size = outchars.size(0)
+        b_cer = 0
+        for b in range(batch_size):
+            s = ''
+            for p in range(outchars.size(2)):
+            #for p in range(outchars.size(1)):
+                if char_indexes[b, p].item() > 0:  # skip the null character
+                    s += self.data_loader.dataset.index_to_char[char_indexes[b, p].item()]
+            chars += s
+
+            b_cer += cer(s, gt_chars[b])
+
+        acc = torch.logical_and(outvalid > 0, targetvalid > 0).float().mean()
+        log = {
+            'cer': b_cer / batch_size,
+            'valid_acc': acc
+        }
+
+        return losses, log, chars

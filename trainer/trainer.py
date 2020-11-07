@@ -55,7 +55,7 @@ class Trainer(BaseTrainer):
                 acc_metrics[i] += metric(output, target)
         return acc_metrics
 
-    def _train_iteration(self, iteration):
+    def _train_iteration(self, iteration, *args, **kwargs):
         """
         Training logic for an iteration
 
@@ -107,7 +107,7 @@ class Trainer(BaseTrainer):
 
         log = {
             'loss': loss,
-            'metrics': metrics
+            'metrics': metrics,
         }
 
 

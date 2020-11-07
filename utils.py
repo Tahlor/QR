@@ -10,3 +10,5 @@ def get_username_and_password(path="./username.txt"):
 
     with open(str(path), "r") as pw:
         return [x.strip() for x in pw.read().split()]
+
+

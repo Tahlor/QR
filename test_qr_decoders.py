@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 
 import qrcode
-from qr_decoder_zoo.Python_QR_Decoder.QRMatrix import QRMatrix
+#from qr_decoder_zoo.Python_QR_Decoder.QRMatrix import QRMatrix
 
 def zbar_decode(img):
     res=pyzbar_decode(img)
@@ -55,7 +55,8 @@ def superimpose(background_img, qr_img, threshold, output_folder="images/superim
     #added_image =  cv2.addWeighted(cropped, threshold, qr_img, 1 - threshold, 0)
     added_image = cropped*threshold + qr_img*(1 - threshold)
     #cv2.imwrite(str(output_file_path), added_image)
-    return added_image #output_file_path
+    return added_image.astype(np.uint8) #output_file_path
+
 if __name__=='__main__':
     qr_decoders = {
             'opencv': cv2.QRCodeDetector(),
@@ -69,6 +70,7 @@ if __name__=='__main__':
             }
     images = list(Path("./imagenet/images/dogs").rglob("*"))
     num_images = len(images)
+    print(num_images)
     test_strings=["short","medium 4io4\:][","long sdfjka349:fg,.<>fgok4t-={}.///gf"]
 
     

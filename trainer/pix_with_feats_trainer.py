@@ -38,7 +38,7 @@ class PixWithFeatsTrainer(Trainer):
     #def _to_tensor(self, data, target):
     #    return self._to_tensor_individual(data), _to_tensor_individual(target)
 
-    def _train_iteration(self, iteration):
+    def _train_iteration(self, iteration, *args, **kwargs):
         """
         Training logic for an iteration
 

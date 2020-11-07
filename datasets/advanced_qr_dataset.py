@@ -12,27 +12,29 @@ import os
 import numpy as np
 import math, random
 import qrcode
-from datasets import utils
+from datasets import data_utils
 import random
 from matplotlib import pyplot as plt
 from pathlib import Path
+import sys
+sys.path.append("..")
+from utils import util
 
 PADDING_CONSTANT = -1
 
 ## TODO:
 #### Save/load datasets
 # Get homogrpahy to work
-# Superimpose with lots of images
 # OCCLUDE
-# Check if QR code reader can read QR codes after distortions
-# Support more arguments from config
+
+FACTOR = lambda x : x
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
     return {'image': torch.stack([b['image'] for b in batch],dim=0),
             'gt_char': [b['gt_char'] for b in batch],
-            'targetchar': torch.stack([b['targetchar'] for b in batch],dim=0),
-            'targetvalid': torch.cat([b['targetvalid'] for b in batch],dim=0)
+            'targetchar': torch.stack([b['targetchar'] for b in batch], dim=0),
+            'targetvalid': torch.cat([b['targetvalid'] for b in batch], dim=0)
             }
 
 class AdvancedQRDataset(Dataset):
@@ -43,16 +45,28 @@ class AdvancedQRDataset(Dataset):
         self.data = None
         self.qr_size = config.image_size #full_config.model.input_size
         self.max_message_len = config.max_message_len
-        self.images = list(Path(config.background_image_path).glob("*"))
-        if config.distortions:
+        if "background_image_path" in config:
+            path = (Path(config.background_image_path) / "files.json")
+            if path.exists():
+                self.images = json.load(path.open())
+            else:
+                self.images = [x.as_posix() for x in Path(config.background_image_path).rglob("*.JPEG")]
+                json.dump(self.images, path.open("w"))
+        else:
+            self.images = None
+
+        if "distortions" in kwargs:
+            self.distortions = kwargs["distortions"]
+        elif config.distortions:
             self.distortions = {"homography":False,
                                 "blur":True,
-                                "superimpose":False,
+                                "superimpose":True,
                                 "add_noise":True,
                                 "distortion":True,
                                 "rotate":False,
-                                "occlude":False,
-                                "background_image":None}
+                                "occlude":True,
+                                "background_images":self.images}
+            #self.occlude = data_utils.Occlude()
         else:
             self.distortions = False
 
@@ -66,13 +80,12 @@ class AdvancedQRDataset(Dataset):
     def __len__(self):
         return 10000 if self.indexes is None else len(self.indexes)
 
-
-
     def save_dataset(self, save_path):
         pass
 
     def load_dataset(self, load_path):
         pass
+
 
     @staticmethod
     def apply_distortions(image,
@@ -83,7 +96,7 @@ class AdvancedQRDataset(Dataset):
                           rotate=True,
                           distortion=True,
                           occlude=True,
-                          background_image=None):
+                          background_images=None):
         """
 
 
@@ -104,34 +117,34 @@ class AdvancedQRDataset(Dataset):
         if image.ndim != 3:
             image = image[:, :, np.newaxis]
 
+        if superimpose and background_images:
+            background_image = AdvancedQRDataset.get_random_image(background_images)
+            image = data_utils.superimpose_images(image, background_image)
+
         if homography and False: # DOESN'T WORK
-            image = utils.homography(image)
+            image = data_utils.homography(image)
 
         if rotate:
             raise NotImplemented
 
         if occlude:
-            raise NotImplemented
+            image = data_utils.occlude(image)[:,:,np.newaxis]
 
         if distortion:
-            image = utils.elastic_transform(image)
+            image = data_utils.elastic_transform(image)
 
         if add_noise:
-            image = utils.gaussian_noise(image)
+            image = data_utils.gaussian_noise(image)
 
         if blur:
-            image = utils.blur(image)
-
-        if superimpose:
-            if background_image is None:
-                background_image = AdvancedQRDataset.get_random_image()
-            image = utils.superimpose_images(image, background_image)
+            image = data_utils.blur(image)
 
         return image
 
-    def get_random_image(self):
-        #filename = "../dev/landscape.png"
-        return cv2.imread(filename=random.choice(self.images))
+    @staticmethod
+    def get_random_image(images):
+        img = random.choice(images) if images else "../dev/landscape.png"
+        return cv2.imread(filename=img, flags=cv2.IMREAD_GRAYSCALE)[:, :, np.newaxis]
 
     def generate_qr_code(self, gt_char):
         qr = qrcode.QRCode(
@@ -147,19 +160,30 @@ class AdvancedQRDataset(Dataset):
         img = qr.make_image(fill_color="black",
                             back_color="white").resize(self.qr_size)
         #print(np.array(img).shape)
-        img = np.array(img)
+        img = np.array(img).astype(np.uint8) * 255
 
         targetchar = torch.LongTensor(17).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]
         targetvalid = torch.FloatTensor([1])
         return {
-            "image": utils.img2tensor(img),
             "gt_char": gt_char,
             'targetchar': targetchar,
             'targetvalid': targetvalid,
-            "image_undistorted": img.astype(float) * 255
+            "image_undistorted": img
         }
+
+    def is_valid_qr(self, image, message=""):
+        """
+
+        Args:
+            image: W,H,C, 0-255
+            message:
+
+        Returns:
+
+        """
+        return not data_utils.qr_decode(image) is None
 
     def create_message(self, l=15):
         return ''.join(random.choices(self.character_set, k=l))
@@ -175,8 +199,8 @@ class AdvancedQRDataset(Dataset):
 
         if self.distortions:
             #img1 = img_dict["image"].clone()
-            img = AdvancedQRDataset.apply_distortions(img_dict["image_undistorted"], **self.distortions)
-            img_dict["image"] = img2 = utils.img2tensor(img.squeeze()) # DOES NOT HANDLE 3 channel color
+            img = AdvancedQRDataset.apply_distortions(img_dict["image_undistorted"].copy(), **self.distortions)
+            img_dict["image"] = img2 = FACTOR(data_utils.img2tensor(img.squeeze())) # DOES NOT HANDLE 3 channel color
             if False:
                 i1, i2 = img.squeeze(), img_dict["image_undistorted"].squeeze()
                 i = np.c_[i1, i2]
@@ -187,6 +211,11 @@ class AdvancedQRDataset(Dataset):
                 plt.imshow(i, cmap="gray");
                 plt.show()
             # plt.hist(img2.numpy().flatten()); plt.show()
+            img_dict["targetvalid"] = torch.FloatTensor(1 if self.is_valid_qr(img) else 0)
+
+        else:
+            img_dict["image"] = FACTOR(data_utils.img2tensor(img_dict["image_undistorted"]))
+
         return img_dict
 
 def _make_char_set(all_char_string):
@@ -212,26 +241,63 @@ def _make_char_set(all_char_string):
 
     return char_to_idx, idx_to_char
 
-def test_distortions():
-    img = cv2.imread(filename = "../dev/landscape.png")
+def test_distortions(dataset=AdvancedQRDataset, image="../dev/landscape.png"):
+    img = cv2.imread(filename = image) if isinstance(image, str) else image
     img = cv2.resize(img, (img.shape[0], 270))
     #plt.imshow(img); plt.show()
     # cv2.imshow("image1", img.copy())
     # cv2.waitKey()
 
-    x = AdvancedQRDataset.apply_distortions(img,
-                                            homography=False,
-                                            blur=False,
-                                            superimpose=False,
-                                            add_noise=True,
-                                            distortion=False,
-                                            rotate=False,
-                                            occlude=False,
-                                            background_image=None)
+    x = dataset.apply_distortions(img,
+                                homography=False,
+                                blur=True,
+                                superimpose=True,
+                                add_noise=True,
+                                distortion=False,
+                                rotate=False,
+                                occlude=True,
+                                background_images=None)
     plt.imshow(x); plt.show()
     assert np.allclose(x, img)
 
 
-if __name__=='__main__':
+def test_dataset():
+    config = "../configs/___distortions.conf"
+    config = edict(json.load(Path(config).open()))
+    config = data_utils.make_config_consistent(config)
+    images = json.load((Path(config.data_loader.background_image_path) / "files.json").open())
+    distortions = {"homography":False,
+                                "blur":False,
+                                "superimpose":True,
+                                "add_noise":False,
+                                "distortion":False,
+                                "rotate":False,
+                                "occlude":True,
+                                "background_images": images}
+
+
+    dataset = AdvancedQRDataset(dirPath=None,
+                                split="train",
+                                config=config.data_loader,
+                                full_config=config,
+                                distortions=distortions)
+    dataset[0]
+    #test_distortions(dataset, image=dataset[0]["image_undistorted"].squeeze())
+
+def test():
     test_distortions()
-    cv2.destroyAllWindows()
+
+def test_loader():
+    import data_loaders
+    config = "../configs/___distortions.conf"
+    config = edict(json.load(Path(config).open()))
+    config = data_utils.make_config_consistent(config)
+    x = data_loaders.getDataLoader(config,"train")
+    iter(x)
+
+if __name__=='__main__':
+    if True:
+        test_dataset()
+        cv2.destroyAllWindows()
+    else:
+        test()

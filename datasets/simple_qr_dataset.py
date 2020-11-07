@@ -61,10 +61,11 @@ class SimpleQRDataset(Dataset):
         qr.add_data(gt_char)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
-        img = np.array(img)
+        img = np.array(img).astype(np.float)
         if self.final_size is not None:
             img = img_f.resize(img, (self.final_size, self.final_size))
-        img = (torch.from_numpy(img)[None, ...].float() / 255) * 2 - 1
+        img = (torch.from_numpy(img)[None, ...]).float() * 2 - 1
+        assert (img.max() <= 1)
 
         targetchar = torch.LongTensor(17).fill_(0)
         for i, c in enumerate(gt_char):

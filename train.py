@@ -9,9 +9,11 @@ from model import *
 from model.loss import *
 from model.metric import *
 from data_loader import getDataLoader
-from datasets import utils as dataset_utils
+from datasets import data_utils as dataset_utils
 from trainer import *
 from logger import Logger
+from utils import log
+
 import socket
 from pathlib import Path
 
@@ -47,7 +49,9 @@ def main(config, resume):
     supercomputer = config['super_computer'] if 'super_computer' in config else False
     #set_procname(config['name'])
     #np.random.seed(1234) I don't have a way of restarting the DataLoader at the same place, so this makes it totaly random
-    train_logger = Logger()
+    save_path = os.path.join(config['trainer']['save_dir'], config['name'])
+    logger = log.setup_logging(save_path)
+    train_logger = Logger(logger=logger)
 
     split = config['split'] if 'split' in config else 'train'
     data_loader, valid_data_loader = getDataLoader(config,split)
@@ -120,7 +124,7 @@ if __name__ == '__main__':
     config = None
     if args.config is not None:
         config = json.load(open(args.config))
-    if  args.resume is None and  args.soft_resume is not None:
+    if args.resume is None and args.soft_resume is not None:
         if not os.path.exists(args.soft_resume):
             print('WARNING: resume path ({}) was not found, starting from scratch'.format(args.soft_resume))
         else:
