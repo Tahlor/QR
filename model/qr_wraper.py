@@ -13,7 +13,7 @@ from .decoder_cnn import DecoderCNN
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt
 from .style_gan import GrowGen, GrowDisc
-
+from .grow_gen_u import GrowGenU
 
 
 
@@ -67,6 +67,8 @@ class QRWraper(BaseModel):
             skip_connections = not config['no_gen_skip'] if 'no_gen_skip' in config else True
             diff_gen = not config['no_diff_gen'] if 'no_diff_gen' in config else True
             self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans,all_style=all_style,skip_connections=skip_connections,diff_gen=diff_gen)
+        elif 'GrowGenU' in config['generator']:
+            self.generator = GrowGenU(style_dim)
         elif 'Grow' in config['generator']:
             self.generator = GrowGen(style_dim)
         else:

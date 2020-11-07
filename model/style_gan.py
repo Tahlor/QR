@@ -414,6 +414,7 @@ class GrowGen(nn.Module):
 
         self.style_emb = nn.Sequential(*layers)
 
+
     def forward(self, qr_image, style=None, step=0, alpha=-1, mixing_range=(-1, -1)):
         batch_size = qr_image.size(0)
         #if style=='mixing' and random.random()<0.9:
@@ -463,7 +464,7 @@ class GrowGen(nn.Module):
 
                 break
 
-        return out
+        return F.tanh(out)
 
 def minibatchStat(data,split=False):
     if split:
