@@ -1,13 +1,14 @@
-import cv2
-import qr_decoder
+#import cv2
+#import qr_decoder
 from pyzbar.pyzbar import decode as pyzbar_decode
 from pathlib import Path
 import os
 from collections import defaultdict
 import numpy as np
+import utils.img_f as cv2
 
 import qrcode
-from qr_decoder_zoo.Python_QR_Decoder.QRMatrix import QRMatrix
+#from qr_decoder_zoo.Python_QR_Decoder.QRMatrix import QRMatrix
 
 def zbar_decode(img):
     res=pyzbar_decode(img)
@@ -58,12 +59,12 @@ def superimpose(background_img, qr_img, threshold, output_folder="images/superim
     return added_image #output_file_path
 if __name__=='__main__':
     qr_decoders = {
-            'opencv': cv2.QRCodeDetector(),
+            #'opencv': cv2.QRCodeDetector(),
             #'allenywang': None,
             'pyzbar': None
             }
     qr_decode = {
-            'opencv': lambda qr,a: qr.detectAndDecode(a)[0],
+            #'opencv': lambda qr,a: qr.detectAndDecode(a)[0],
             #:'allenywang': lambda qr,a: QRMatrix('decode',image=a).decode(),
             'pyzbar': lambda qr,a: zbar_decode(a)
             }

@@ -91,7 +91,7 @@ class BaseTrainer:
                             gen_only_params.append(param)
                         if 'style_extractor' in name:
                             style_ex_only_params.append(param)
-            to_opt = [{'params': main_params}, {'params': slow_params, 'lr': config['optimizer']['lr']*0.01}]
+            to_opt = [{'params': main_params}, {'params': slow_params, 'lr': config['optimizer']['lr']*0.01, 'mult':0.001}]
             self.optimizer = getattr(optim, config['optimizer_type'])(to_opt,
                                                                       **config['optimizer'])
             if len(discriminator_params)>0:
@@ -103,6 +103,8 @@ class BaseTrainer:
                 to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
                 self.optimizer_gen_only = getattr(optim, config['optimizer_type'])(to_opt,
                                                                           **config['optimizer'])
+            else:
+                self.optimizer_gen_only=None
             if self.curriculum is not None and self.curriculum.need_sep_style_ex_opt:
                 to_opt = [{'params': style_ex_only_params}, {'params': style_ex_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
                 self.optimizer_style_ex_only = getattr(optim, config['optimizer_type'])(to_opt,
@@ -359,6 +361,10 @@ class BaseTrainer:
             'monitor_best': self.monitor_best,
             'config': self.config
         }
+        if self.optimizer_discriminator is not None:
+            state['optimizer_discriminator'] = self.optimizer_discriminator.state_dict()
+        if self.optimizer_gen_only is not None:
+            state['optimizer_gen_only'] = self.optimizer_gen_only.state_dict()
         if 'save_mode' not in self.config or self.config['save_mode']=='state_dict':
             state_dict = self.model.state_dict()
             for k,v in state_dict.items():

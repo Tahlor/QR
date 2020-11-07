@@ -20,8 +20,8 @@ def minibatchStat(data,split=False): #from progressive growing of GANs
     else:
         data_std = torch.sqrt(data.var(0, unbiased=False) + 1e-8)
         mean_std = data_std.mean()
-        mean_std = mean_std.expand(data.size(0), 1, 4, 4)
-        data = torch.cat([data, mean_std], 1)
+        mean_std = mean_std.expand(data.size(0), 1, data.size(2), data.size(3))
+        data = torch.cat([data, mean_std], dim=1)
         return data
 
 class HybridDiscriminator(nn.Module):
@@ -66,12 +66,12 @@ class HybridDiscriminator(nn.Module):
         self.convs2 = [#nn.Sequential(
                 SpectralNorm(nn.Conv2d(8*dim, 16*dim, 4, stride=2, padding=(0,0))),
                 nn.LeakyReLU(leak,True),
-                ]
-        convs3 = [
                 SpectralNorm(nn.Conv2d(16*dim, 16*dim, 3, stride=1, padding=(0,0))),
                 nn.Dropout2d(0.05,True),
                 nn.LeakyReLU(leak,True),
-                SpectralNorm(nn.Conv2d(16*dim, 16*dim, 4, stride=2, padding=(0,0))),
+                ]
+        convs3 = [
+                SpectralNorm(nn.Conv2d(16*dim + (1 if self.use_minibatch_stat else 0), 16*dim, 4, stride=2, padding=(0,0))),
                 nn.Dropout2d(0.05,True),
                 nn.LeakyReLU(leak,True),
                 ]

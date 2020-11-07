@@ -13,3 +13,4 @@ from .trainer import *
 #from .auto_trainer import AutoTrainer
 from .qr_decoder_trainer import QRDecoderTrainer
 from .qr_gen_trainer import QRGenTrainer
+from .qr_grow_gen_trainer import QRGrowGenTrainer

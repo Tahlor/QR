@@ -316,7 +316,8 @@ class NoiseInjection(nn.Module):
     def __init__(self, channel):
         super().__init__()
 
-        self.weight = nn.Parameter(torch.ones(1, channel, 1, 1)*0.01)
+        #self.weight = nn.Parameter(torch.ones(1, channel, 1, 1))
+        self.weight = nn.Parameter(torch.zeros(1, channel, 1, 1))
 
     def forward(self, image, noise):
         return image + self.weight * noise
@@ -444,16 +445,17 @@ class StyledConvBlock(nn.Module):
         self.lrelu2 = nn.LeakyReLU(0.2)
 
     def forward(self, input):
-        input, style = input
+        input, style= input
         #print(input.size())
         out = self.conv1(input)
-        out = self.noise1(out, torch.randn_like(out))
+        noise = torch.randn(out.size(0), 1, out.size(2), out.size(3), device=out.device)
+        out = self.noise1(out, noise)#torch.randn_like(out))
         out = self.lrelu1(out)
         out = self.adain1(out, style)
         #print('out: {}'.format(out.size()))
 
         out = self.conv2(out)
-        out = self.noise2(out, torch.randn_like(out))
+        out = self.noise2(out, noise)#torch.randn_like(out))
         out = self.lrelu2(out)
         out = self.adain2(out, style)
         #print('out: {}'.format(out.size()))

@@ -12,7 +12,7 @@ from .conv_gen import ConvGen
 from .decoder_cnn import DecoderCNN
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt
-
+from .style_gan import GrowGen, GrowDisc
 
 
 
@@ -67,6 +67,8 @@ class QRWraper(BaseModel):
             skip_connections = not config['no_gen_skip'] if 'no_gen_skip' in config else True
             diff_gen = not config['no_diff_gen'] if 'no_diff_gen' in config else True
             self.generator = ConvGen(style_dim,g_dim,down_steps,n_style_trans=n_style_trans,all_style=all_style,skip_connections=skip_connections,diff_gen=diff_gen)
+        elif 'Grow' in config['generator']:
+            self.generator = GrowGen(style_dim)
         else:
             raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 
@@ -87,6 +89,8 @@ class QRWraper(BaseModel):
             elif 'hybrid' in config['discriminator']:
                 use_minibatch_stat = config['disc_use_minibatch_stat'] if 'disc_use_minibatch_stat' in config else False
                 self.discriminator=HybridDiscriminator(use_minibatch_stat=use_minibatch_stat)
+            elif 'Grow' in config['discriminator']:
+                self.discriminator=GrowDisc()
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 
@@ -99,10 +103,10 @@ class QRWraper(BaseModel):
             self.discriminator.load_state_dict( discriminator_state_dict )
 
 
-    def forward(self,qr_image,style=None):
+    def forward(self,qr_image,style=None,step=0, alpha=-1):
         batch_size = qr_image.size(0)
         if style is None:
             style = torch.FloatTensor(batch_size,self.style_dim).normal_().to(qr_image.device)
-        gen_img = self.generator(qr_image,style)
+        gen_img = self.generator(qr_image,style,step,alpha)
         return gen_img
 
