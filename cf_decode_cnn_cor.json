@@ -1,0 +1,68 @@
+{
+    "name": "decode_cnn_cor",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+        "data_set_name": "SimpleQRDataset",
+        "final_size": 128,
+        "batch_size": 64,
+        "shuffle": true,
+        "num_workers": 2,
+	"data_dir": "none"
+
+    },
+    "validation": {
+        "shuffle": false,
+        "batch_size": 128
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0002,
+        "weight_decay": 0,
+        "betas": [0.5,0.999]
+    },
+    "loss": {
+        "char": "cross_entropy",
+	"Xvalid": "sigmoid_BCE_loss"
+    },
+    "loss_weights": {
+	"char": 1.0,
+	"Xvalid": 1.0
+
+    },
+    "loss_params":
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "QRDecoderTrainer",
+        "iterations": 30000,
+        "save_dir": "saved/",
+        "val_step": 10000,
+        "save_step": 10000,
+        "save_step_minor": 500,
+        "log_step": 100,
+        "verbosity": 1,
+        "monitor": "loss",
+
+        "use_learning_schedule": false
+
+    },
+    "model": {
+           "arch": "DecoderCNN", 
+	   "input_size": [128,128],
+	   "cnn_layer_specs": [1,32,"cc-32","M","cc-64","cc-64","M","cc-128","cc-128","cc-128","M","cc-256","cc-256","cc-256"],
+	   "fully_connected_specs": ["FC2048","FC1024"],
+	   "max_message_len": 17,
+	   "num_char_class": 11
+
+
+    }
+}
