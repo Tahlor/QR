@@ -57,8 +57,13 @@ class ResNet(DecoderCNN):
         super(ResNet, self).__init__(config, init=False)
 
         resnet = models.resnet50(pretrained=True)
-        resnet.conv1 = torch.nn.Conv1d(1, 64, (7, 7), (2, 2), (3, 3), bias=False)
-        #resnet.conv1 = CoordConv(1, 64, kernel_size= (7, 7), padding=(2, 2), dilation=(3, 3), groups=1)  # ,features=coordconv)
+
+        # 1 channel input - no coordconv / pretraining in first layer
+        if "input_channels" in config and config.input_channels==1:
+            resnet.conv1 = torch.nn.Conv2d(1, 64, (7, 7), (2, 2), (3, 3), bias=False)
+
+        # uses way more gpu mem and way slower
+        #resnet.conv1 = CoordConv(1, 64, kernel_size= (7, 7), padding=(2, 2), dilation=(3, 3))  # ,features=coordconv)
 
         self.cnn_layers = nn.Sequential(*list(resnet.children())[:-1])
 

@@ -1,3 +1,5 @@
+
+
 # Framework code from handwriting generation project
 "Text and Style Conditioned GAN for the Generation of Offline-Handwriting Lines" published at BMVC 2020. https://arxiv.org/abs/2009.00678
 

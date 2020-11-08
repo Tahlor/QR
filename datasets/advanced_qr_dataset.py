@@ -44,6 +44,8 @@ class AdvancedQRDataset(Dataset):
         self.char_to_index, self.index_to_char = _make_char_set(config.alphabet)
         self.data = None
         self.qr_size = config.image_size #full_config.model.input_size
+        self.coordconv = config.coordconv
+
         self.max_message_len = config.max_message_len
         if "background_image_path" in config:
             path = (Path(config.background_image_path) / "files.json")
@@ -114,12 +116,12 @@ class AdvancedQRDataset(Dataset):
         Returns:
 
         """
-        if image.ndim != 3:
-            image = image[:, :, np.newaxis]
+        # if image.ndim != 3:
+        #     image = image[:, :, np.newaxis]
 
-        if superimpose and background_images:
+        if superimpose and background_images and np.random.random()>.5:
             background_image = AdvancedQRDataset.get_random_image(background_images)
-            image = data_utils.superimpose_images(image, background_image)
+            image = data_utils.superimpose_images(image, background_image) #[:,:,np.newaxis]
 
         if homography and False: # DOESN'T WORK
             image = data_utils.homography(image)
@@ -127,16 +129,16 @@ class AdvancedQRDataset(Dataset):
         if rotate:
             raise NotImplemented
 
-        if occlude:
-            image = data_utils.occlude(image)[:,:,np.newaxis]
+        if occlude and np.random.random()>.5:
+            image = data_utils.occlude(image)
 
-        if distortion:
+        if distortion and np.random.random()>.5:
             image = data_utils.elastic_transform(image)
 
-        if add_noise:
+        if add_noise and np.random.random()>.5:
             image = data_utils.gaussian_noise(image)
 
-        if blur:
+        if blur and np.random.random()>.5:
             image = data_utils.blur(image)
 
         return image
@@ -185,6 +187,44 @@ class AdvancedQRDataset(Dataset):
         """
         return not data_utils.qr_decode(image) is None
 
+    # def set_coordconv(self, type_as=torch.DoubleTensor):
+    #     x_dim, y_dim = self.qr_size
+    #     xx_channel = torch.arange(x_dim).repeat(1, y_dim, 1)
+    #     yy_channel = torch.arange(y_dim).repeat(1, x_dim, 1).transpose(1, 2)
+    #
+    #     xx_channel = xx_channel.float() / (x_dim - 1)
+    #     yy_channel = yy_channel.float() / (y_dim - 1)
+    #
+    #     xx_channel = (xx_channel * 2 - 1).type(type_as)
+    #     yy_channel = (yy_channel * 2 - 1).type(type_as)
+    #
+    #     self.xx_channel = xx_channel.transpose(1, 2).float()
+    #     self.yy_channel = yy_channel.transpose(1, 2).float()
+    # def coordconv(self, input_tensor):
+    #
+    #     return torch.cat([
+    #         input_tensor,
+    #         self.xx_channel,
+    #         self.yy_channel], dim=0)
+    def add_coordconv(self, input_tensor):
+        x_dim, y_dim = self.qr_size
+        xx_channel = torch.arange(x_dim).repeat(1, y_dim, 1)
+        yy_channel = torch.arange(y_dim).repeat(1, x_dim, 1).transpose(1, 2)
+
+        xx_channel = xx_channel.float() / (x_dim - 1)
+        yy_channel = yy_channel.float() / (y_dim - 1)
+
+        xx_channel = (xx_channel * 2 - 1)
+        yy_channel = (yy_channel * 2 - 1)
+
+        xx_channel = xx_channel.transpose(1, 2).float()
+        yy_channel = yy_channel.transpose(1, 2).float()
+
+        return torch.cat([
+            input_tensor,
+            xx_channel,
+            yy_channel], dim=0)
+
     def create_message(self, l=15):
         return ''.join(random.choices(self.character_set, k=l))
 
@@ -211,11 +251,16 @@ class AdvancedQRDataset(Dataset):
                 plt.imshow(i, cmap="gray");
                 plt.show()
             # plt.hist(img2.numpy().flatten()); plt.show()
-            img_dict["targetvalid"] = torch.FloatTensor(1 if self.is_valid_qr(img) else 0)
-
+            img_dict["targetvalid"] = torch.FloatTensor([1 if self.is_valid_qr(img) else 0])
+            #print(img_dict["targetvalid"])
         else:
             img_dict["image"] = FACTOR(data_utils.img2tensor(img_dict["image_undistorted"]))
 
+        # Add coordconv
+        if self.coordconv:
+            img_dict["image"] = self.add_coordconv(img_dict["image"])
+        # print(img_dict["image"])
+        # stop
         return img_dict
 
 def _make_char_set(all_char_string):

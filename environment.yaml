@@ -31,3 +31,4 @@ dependencies:
 # prefix: /home/taylor/env/anaconda3/envs/qr
 # conda env update -f environment.yaml
 # pip install qrcode[pil]
+# conda env create -f environment.yaml --prefix /zgrouphome/fslg_qr/env/qr

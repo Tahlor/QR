@@ -1,3 +1,5 @@
+from timeit import default_timer as timer
+import numpy as np
 import os
 import math
 import json, copy
@@ -203,7 +205,7 @@ class BaseTrainer:
         # plt.imsave()
         img_path = (Path(self.checkpoint_dir) / "images") #.mkdir(exist_ok=True, parents=True)
 
-        img = Image.fromarray(img, 'L')
+        img = Image.fromarray(((img+1)*127.5).astype(np.uint8), 'L')
         img.save(img_path / (name + ".JPEG"))
 
     def train(self):
@@ -214,7 +216,7 @@ class BaseTrainer:
         sumTime=0
         #for metric in self.metrics:
         #    sumLog['avg_'+metric.__name__]=0
-
+        #start_time = timer()
         for self.iteration in range(self.start_iteration, self.iterations + 1):
             if not self.logged:
                 print('iteration: {}     '.format(self.iteration), end='\r')
@@ -272,13 +274,15 @@ class BaseTrainer:
 
             #LOG
             if self.iteration%self.log_step==0:
+                #print(f"Time since last log: {timer()-start_time}"); start_time = timer();
                 #prinpt()#clear inplace text
                 print('                   ', end='\r')
                 if self.iteration-self.start_iteration>=self.log_step: #skip avg if started in odd spot
                     for key in sumLog:
                         sumLog[key] /= self.log_step
                     #self._minor_log(sumLog)
-                    log = {**log, **sumLog}
+                    log = { **log, **sumLog}
+                    #start_time = timer(); "elapsed_time":timer()-start_time,
                 self._minor_log(log)
                 for key in sumLog:
                     sumLog[key] =0
@@ -288,10 +292,11 @@ class BaseTrainer:
                 if "images" in result and result["images"]:
                     # Save an image
                     image_data = result["images"]
-                    for i,img in enumerate(image_data["data"]):
-                        name = image_data["target"][i]
-                        img = img[i].cpu().detach().numpy()
-                        self.save_image(name, img)
+                    #for i,img in enumerate(image_data["data"]):
+                    i = 0; img = image_data["data"]
+                    name = image_data["target"][i]
+                    img = img[i,0].cpu().detach().numpy()
+                    self.save_image(name, img)
 
             #VALIDATION
             if self.iteration%self.val_step==0 and self.val_step>0:

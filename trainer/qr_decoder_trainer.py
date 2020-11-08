@@ -93,7 +93,8 @@ class QRDecoderTrainer(BaseTrainer):
             #data, target = self._to_tensor(*self.data_loader_iter.next())
         except StopIteration:
             self.data_loader_iter = iter(self.data_loader)
-            losses,run_log,out = self.run(self.data_loader_iter.next())
+            next_item = self.data_loader_iter.next()
+            losses,run_log,out = self.run(next_item)
             #data, target = self._to_tensor(*self.data_loader_iter.next())
         #toc=timeit.default_timer()
         #print('data: '+str(toc-tic))

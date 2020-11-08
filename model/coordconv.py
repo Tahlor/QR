@@ -117,6 +117,57 @@ class CoordConv(nn.Module):
         if with_r:
             in_size += 1
         self.conv = nn.Conv2d(in_size, out_channels, **kwargs)
+        #resnet.conv1 = torch.nn.Conv2d(1, 64, (7, 7), (2, 2), (3, 3), bias=False)
+        #resnet.conv1 = CoordConv(1, 64, kernel_size= (7, 7), padding=(2, 2), dilation=(3, 3), groups=1)  # ,features=coordconv)
+
+    def forward(self, x):
+        ret = self.addcoords(x)
+        ret = self.conv(ret)
+        return ret
+
+
+'''
+An alternative implementation for PyTorch with auto-infering the x-y dimensions.
+'''
+class AddCoords2(nn.Module):
+
+    def __init__(self,  x_dim=224, y_dim=224, type_as=torch.DoubleTensor, with_r=False):
+        super().__init__()
+        xx_channel = torch.arange(x_dim).repeat(1, y_dim, 1)
+        yy_channel = torch.arange(y_dim).repeat(1, x_dim, 1).transpose(1, 2)
+
+        xx_channel = xx_channel.float() / (x_dim - 1)
+        yy_channel = yy_channel.float() / (y_dim - 1)
+
+        self.xx_channel = (xx_channel * 2 - 1).type(type_as)
+        self.yy_channel = (yy_channel * 2 - 1).type(type_as)
+
+
+    def forward(self, input_tensor):
+        """
+        Args:
+            input_tensor: shape(batch, channel, x_dim, y_dim)
+        """
+        xx_channel = self.xx_channel.repeat(input_tensor.shape[0], 1, 1, 1).transpose(2, 3)
+        yy_channel = self.yy_channel.repeat(input_tensor.shape[0], 1, 1, 1).transpose(2, 3)
+
+        ret = torch.cat([
+            input_tensor,
+            xx_channel.type_as(input_tensor),
+            yy_channel.type_as(input_tensor)], dim=1)
+
+        return ret
+
+
+class CoordConv2(nn.Module):
+
+    def __init__(self, in_channels, out_channels, with_r=False, **kwargs):
+        super().__init__()
+        self.addcoords = AddCoords2(with_r=with_r)
+        in_size = in_channels+2
+        if with_r:
+            in_size += 1
+        self.conv = nn.Conv2d(in_size, out_channels, **kwargs)
 
     def forward(self, x):
         ret = self.addcoords(x)

@@ -81,6 +81,11 @@ def make_config_consistent(config):
     elif "image_size" in config.data_loader:
         config.data_loader.final_size = config.data_loader.image_size[0]
 
+    if config.data_loader.coordconv:
+        config.model.input_channels = 3
+    else:
+        config.model.input_channels = 1
+
     config.full_path = os.path.join(config['trainer']['save_dir'], config['name'])
 
     (Path(config.full_path) / "images").mkdir(exist_ok=True, parents=True)
@@ -144,7 +149,7 @@ def occlude(img):
     h = np.random.randint(int(img.shape[1]/3))
     x1 = np.random.randint(img.shape[0]-w)
     y1 = np.random.randint(img.shape[1]-h)
-    img[x1:x1 + w, y1:y1+h] = np.random.uniform(0, 255, [w,h])
+    img[x1:x1 + w, y1:y1+h] = np.random.uniform(0, 255, [w,h] if img.ndim==2 else [w,h,1])
     return img
 
 def img2tensor(img):
@@ -182,6 +187,8 @@ def superimpose_images(img1, img2, img2_wt=None):
     Returns:
 
     """
+    if img1.ndim == 2:
+        img1 = img1[:,:,np.newaxis]
     if img2_wt is None:
         img2_wt = np.clip(np.random.randn()/3+.2,0,.9)
     if isinstance(img2, str):
@@ -223,7 +230,7 @@ def elastic_transform(image, alpha=2.5, sigma=.5, random_state=None, spline_orde
     if random_state is None:
         random_state = np.random.RandomState(None)
 
-    assert image.ndim == 3
+    #assert image.ndim == 3
     shape = image.shape[:2]
 
     dx = gaussian_filter((random_state.rand(*shape) * 2 - 1),
@@ -234,8 +241,14 @@ def elastic_transform(image, alpha=2.5, sigma=.5, random_state=None, spline_orde
     x, y = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing='ij')
     indices = [np.reshape(x + dx, (-1, 1)), np.reshape(y + dy, (-1, 1))]
     result = np.empty_like(image)
-    for i in range(image.shape[2]):
-        result[:, :, i] = map_coordinates(
-            image[:, :, i], indices, order=spline_order, mode=mode).reshape(shape)
+    if image.ndim ==3:
+        for i in range(image.shape[2]):
+            result[:, :, i] = map_coordinates(
+                image[:, :, i], indices, order=spline_order, mode=mode).reshape(shape)
+    elif image.ndim==2:
+        result[:, :] = map_coordinates(
+            image[:, :], indices, order=spline_order, mode=mode).reshape(shape)
+    else:
+        raise Exception("Should have 2 or 3 dimensions")
     return result
 
