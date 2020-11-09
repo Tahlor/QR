@@ -445,8 +445,9 @@ class QRGrowGenTrainer(BaseTrainer):
                                 p.grad += 2*R*(abmean_Ds[i]/abmean_R)
                         elif self.balance_loss.startswith('sign_preserve_var'): #This is the best, as you can specify a weight for each balanced term
                             abmean_R = torch.abs(R).mean()
-                            if abmean_R!=0:
-                                p.grad += x*R*(abmean_Ds[i]/abmean_R)
+                            add = x*R*(abmean_Ds[i]/abmean_R)
+                            if not torch.isnan(add).any():
+                                p.grad += add
                         elif self.balance_loss.startswith('sign_preserve_x'):
                             abmean_R = torch.abs(R).mean()
                             if abmean_R!=0:
@@ -632,7 +633,7 @@ class QRGrowGenTrainer(BaseTrainer):
         else:
             gen_image = None
 
-        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson:
+        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson and self.resolution>=32:
             gen_valid,gen_chars = self.model.qr_net(gen_image)
             losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
             #assert(losses['charLoss']!=0)
@@ -759,7 +760,7 @@ class QRGrowGenTrainer(BaseTrainer):
             for name in get:
                 if name=='gen_image' or name=='gen_img' or name=='gen':
                     if gen_image is not None:
-                        got[name] = gen_image.cpu().detach().clip(-1,1)
+                        got[name] = gen_image.cpu().detach().clamp(-1,1)
                     else:
                         print('ERROR, gen_image is None, lesson: {}'.format(lesson))
                         #got[name] = None
