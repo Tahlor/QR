@@ -15,3 +15,7 @@ The model needs to have some distribution associated with it, so
 that we turn a knob and the most important parts of the QR code are fixed 
 first, followed by the less essential bits. OR rather, we figure out
 the threshold the scanner needs to recognize a block, change saturates at this point.
+
+Or just make a predictor, given the true image and a corrupted one,
+what is the smallest change to make it readable. RL or heuristic 
+search problem.
