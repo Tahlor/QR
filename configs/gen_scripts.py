@@ -2,12 +2,13 @@ from pathlib import Path
 ENV = "/zgrouphome/fslg_qr/env/qr"
 Path(f"./auto/scripts").mkdir(parents=True, exist_ok=True)
 def create_script(config_path):
+    config_name = config_path.stem.replace("___","")
     script = f"""#!/bin/bash
 #SBATCH --gres=gpu:1
 #SBATCH -C 'rhel7&pascal'
 #SBATCH --mem 10000
 #SBATCH --ntasks 7
-#SBATCH --output="{config_path.stem}.slurm"
+#SBATCH --output="{config_name}.slurm"
 #SBATCH --time 36:00:00
 #SBATCH --mail-user=taylornarchibald@gmail.com   # email address
 #SBATCH --mail-type=BEGIN
@@ -30,7 +31,11 @@ which python
 python -u train.py --config "./configs/{config_path.as_posix()}"
 
 """
-    Path(f"./auto/scripts/{config_path.stem}.sh").open("w").write(script)
+    Path(f"./auto/scripts/{config_name}.sh").open("w").write(script)
 
-for f in Path("./auto").glob("*.json"):
-    create_script(f)
+def run_it():
+    for f in Path("./auto").glob("*.json"):
+        create_script(f)
+
+if __name__=='__main__':
+    run_it()

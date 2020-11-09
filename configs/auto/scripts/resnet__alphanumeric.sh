@@ -23,5 +23,5 @@ conda activate "/zgrouphome/fslg_qr/env/qr"
 cd "/fslhome/tarch/fsl_groups/fslg_qr/qr"
 which python
 
-python -u train.py --config "./configs/auto/resnet__alphanumeric.json"
+python -u train.py --config "./configs/auto/___resnet__alphanumeric.json"
 

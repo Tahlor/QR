@@ -16,6 +16,7 @@ dependencies:
   - cython
   - matplotlib
   - torchvision
+  - zbar
   - pip:
     - qrcode
     - opencv-python==4.3.0.36
@@ -25,6 +26,7 @@ dependencies:
     - editdistance
     - easydict
     - torchsummary
+    - pyzbar
 
 
 
