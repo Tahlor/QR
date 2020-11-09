@@ -1,5 +1,5 @@
 {
-    "name": "qr_grow_gen",
+    "name": "grow_gen",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
@@ -15,13 +15,13 @@
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 36,
+	    "batch_size": 48,
 	    "num_workers": 2
     },
 
     "validation": {
         "shuffle": false,
-        "batch_size": 54
+        "batch_size": 64
     },
 
     
@@ -40,10 +40,8 @@
         "betas": [0.5,0.999]
     },
     "loss": {
-        "char": "cross_entropy"
     },
     "loss_weights": {
-        "char": 1.0,
 	"discriminator": 1.0,
 	"generator": 1.0
 
@@ -54,10 +52,10 @@
     "metrics": [],
     "trainer": {
         "class": "QRGrowGenTrainer",
-        "iterations": 600000,
+        "iterations": 20000,
         "save_dir": "saved/",
         "val_step": 50000,
-        "save_step": 50000,
+        "save_step": 10000,
         "save_step_minor": 500,
         "log_step": 500,
         "verbosity": 1,
@@ -65,7 +63,7 @@
 
 	"freeze_param_names": ["qr_net"],
         "slow_param_names": ["style_emb"],
-        "grow_step_length": 30000,
+        "grow_step_length": 1000,
 
         "curriculum": {
             "0": [     
@@ -76,19 +74,18 @@
         "new_gen_freq": 0.8,
         "forget_new_freq": 0.95,
         "balance_loss": "sign_preserve_var",
-        "balance_var_x": {"0":[0.5]},
+        "balance_var_x": {"0":[]},
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/qr_grow_gen",
-        "serperate_print_every": 5000,
+        "print_dir": "train_out/grow_gen",
+        "serperate_print_every": 1000,
         "print_every": 250
     },
     "model": {
 	"arch": "QRWraper", 
         "style_dim": 512,
-        "pretrained_qr": "saved/decode_cnn_cor/checkpoint-latest.pth",
-        "generator": "GrowGenU",
+        "generator": "GrowGen",
         "discriminator": "GrowDisc"
 
 
