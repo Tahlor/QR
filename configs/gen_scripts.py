@@ -1,8 +1,17 @@
+import json
 from pathlib import Path
+from easydict import EasyDict as edict
+
 ENV = "/zgrouphome/fslg_qr/env/qr"
 Path(f"./auto/scripts").mkdir(parents=True, exist_ok=True)
 def create_script(config_path):
     config_name = config_path.stem.replace("___","")
+    checkpoint = Path(f"../saved/{config_name}/checkpoint-latest.pth")
+    if checkpoint.exists():
+        checkpoint = f"./saved/{config_name}/checkpoint-latest.pth"
+        resume = f"""--resume "{checkpoint}" """
+    else:
+        resume = ""
     script = f"""#!/bin/bash
 #SBATCH --gres=gpu:1
 #SBATCH -C 'rhel7&pascal'
@@ -25,16 +34,26 @@ export PATH="{ENV}:$PATH"
 eval "$(conda shell.bash hook)"
 conda activate "{ENV}"
 
-cd "/fslhome/tarch/fsl_groups/fslg_qr/qr"
+cd "/lustre/scratch/grp/fslg_qr/qr"
 which python
 
-python -u train.py --config "./configs/{config_path.as_posix()}"
+python -u train.py --config "./configs/{config_path.as_posix()}" {resume}
 
 """
     Path(f"./auto/scripts/{config_name}.sh").open("w").write(script)
 
+def check_config(path):
+    correct_name = path.stem.replace("___", "")
+    print(correct_name)
+    config = edict(json.load(path.open()))
+    if config.name != correct_name:
+        config.name = correct_name
+        locals().update(globals())
+        json.dump(config.__dict__, path.open("w"), indent=4, separators=(',', ':'))
+
 def run_it():
     for f in Path("./auto").glob("*.json"):
+        check_config(f)
         create_script(f)
 
 if __name__=='__main__':

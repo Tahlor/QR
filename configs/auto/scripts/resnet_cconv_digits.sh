@@ -20,8 +20,8 @@ export PATH="/zgrouphome/fslg_qr/env/qr:$PATH"
 eval "$(conda shell.bash hook)"
 conda activate "/zgrouphome/fslg_qr/env/qr"
 
-cd "/fslhome/tarch/fsl_groups/fslg_qr/qr"
+cd "/lustre/scratch/grp/fslg_qr/qr"
 which python
 
-python -u train.py --config "./configs/auto/___resnet_cconv_digits.json"
+python -u train.py --config "./configs/auto/___resnet_cconv_digits.json" 
 

@@ -3,7 +3,7 @@
 #SBATCH -C 'rhel7&pascal'
 #SBATCH --mem 10000
 #SBATCH --ntasks 7
-#SBATCH --output="resnet__digits.slurm"
+#SBATCH --output="default__digits.slurm"
 #SBATCH --time 36:00:00
 #SBATCH --mail-user=taylornarchibald@gmail.com   # email address
 #SBATCH --mail-type=BEGIN
@@ -23,5 +23,5 @@ conda activate "/zgrouphome/fslg_qr/env/qr"
 cd "/lustre/scratch/grp/fslg_qr/qr"
 which python
 
-python -u train.py --config "./configs/auto/___resnet__digits.json" 
+python -u train.py --config "./configs/auto/___default__digits.json" 
 
