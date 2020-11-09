@@ -119,7 +119,7 @@ class AdvancedQRDataset(Dataset):
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
 
-        if superimpose and background_images and np.random.random()>.5:
+        if superimpose and background_images and np.random.random()>.3:
             background_image = AdvancedQRDataset.get_random_image(background_images)
             image = data_utils.superimpose_images(image, background_image) #[:,:,np.newaxis]
 
@@ -129,16 +129,16 @@ class AdvancedQRDataset(Dataset):
         if rotate:
             raise NotImplemented
 
-        if occlude and np.random.random()>.5:
+        if occlude and np.random.random()>.3:
             image = data_utils.occlude(image)
 
-        if distortion and np.random.random()>.5:
+        if distortion and np.random.random()>.3:
             image = data_utils.elastic_transform(image)
 
-        if add_noise and np.random.random()>.5:
+        if add_noise and np.random.random()>.3:
             image = data_utils.gaussian_noise(image)
 
-        if blur and np.random.random()>.5:
+        if blur and np.random.random()>.3:
             image = data_utils.blur(image)
 
         return image

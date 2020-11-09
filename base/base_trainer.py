@@ -159,12 +159,18 @@ class BaseTrainer:
             warmup_steps = config['trainer']['warmup_steps'] if 'warmup_steps' in config['trainer'] else 1000
             lr_lambda = lambda step_num: min(1,(step_num+0.001)/warmup_steps)
             self.lr_schedule = torch.optim.lr_scheduler.LambdaLR(self.optimizer,lr_lambda)
+        elif self.useLearningSchedule == "StepLR":
+            print(f"Using StepLR, {config.trainer.scheduler_step} {config.trainer.scheduler_gamma}")
+            self.lr_schedule = torch.optim.lr_scheduler.StepLR(
+                self.optimizer, step_size=config["trainer"]["scheduler_step"], gamma=config["trainer"]["scheduler_gamma"])
+
         elif self.useLearningSchedule is True:
             warmup_steps = config['trainer']['warmup_steps'] if 'warmup_steps' in config['trainer'] else 1000
             #lr_lambda = lambda step_num: min((step_num+1)**-0.3, (step_num+1)*warmup_steps**-1.3)
             lr_lambda = lambda step_num: min((max(0.000001,step_num-(warmup_steps-3))/100)**-0.1, step_num*(1.485/warmup_steps)+.01)
             #y=((x-(2000-3))/100)^-0.1 and y=x*(1.485/2000)+0.01
             self.lr_schedule = torch.optim.lr_scheduler.LambdaLR(self.optimizer,lr_lambda)
+
         elif self.useLearningSchedule:
             print('Unrecognized learning schedule: {}'.format(self.useLearningSchedule))
             exit()
@@ -294,7 +300,7 @@ class BaseTrainer:
                     image_data = result["images"]
                     #for i,img in enumerate(image_data["data"]):
                     i = 0; img = image_data["data"]
-                    name = image_data["target"][i]
+                    name = f"{image_data['target'][i]}_{image_data['valid'][i]}"
                     img = img[i,0].cpu().detach().numpy()
                     self.save_image(name, img)
 

@@ -126,7 +126,10 @@ class QRDecoderTrainer(BaseTrainer):
         log = {
             'loss': loss,
             'images': {"data": next_item["image"],
-                       "target": next_item["gt_char"]} if log_step else None,
+                       "target": next_item["gt_char"],
+                        "valid": next_item["targetvalid"].detach().cpu().int().numpy()} if log_step else None,
+            # "LR": self.optimizer.param_groups[0]['lr'],
+            # "LR2": self.optimizer.param_groups[1]['lr'],
             #'metrics': metrics,
            **losses,
            **run_log
