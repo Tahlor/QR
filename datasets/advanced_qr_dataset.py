@@ -149,8 +149,15 @@ class AdvancedQRDataset(Dataset):
 
     @staticmethod
     def get_random_image(images):
-        img = random.choice(images) if images else "../dev/landscape.png"
-        return cv2.imread(filename=img, flags=cv2.IMREAD_GRAYSCALE)[:, :, np.newaxis]
+        while True:
+            try:
+                img = random.choice(images) if images else "../dev/landscape.png"
+                img = cv2.imread(filename=img, flags=cv2.IMREAD_GRAYSCALE)[:, :, np.newaxis]
+                if not img is None:
+                    break
+            except:
+                pass
+        return img
 
     def generate_qr_code(self, gt_char):
         qr = qrcode.QRCode(
