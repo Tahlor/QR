@@ -33,6 +33,8 @@ for coord_conv in True,False:
             config.data_loader.alphabet = alphabet
             config.model.max_message_len = 17
             config.data_loader.max_message_length = config.model.max_message_len = 17
+
+            # Make configs consistent
             config.data_loader.input_size = config.model.input_size
             config.data_loader.batch_size = 32
             name = f"{architecture}{'_cconv' if coord_conv else '_'}_{'alphanumeric' if 'a' in alphabet else 'digits'}.json"
