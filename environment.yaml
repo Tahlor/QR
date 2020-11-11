@@ -1,8 +1,8 @@
 #name: qr2
 channels:
-  - defaults
-  - python
+  - pytorch
   - conda-forge
+  - defaults
 dependencies:
   - pyqt
   - pip
@@ -11,7 +11,7 @@ dependencies:
   - sqlite
   - tk
   - numpy
-  - pytorch-gpu
+  - pytorch>=1.7.0
   - scikit-learn
   - cython
   - matplotlib

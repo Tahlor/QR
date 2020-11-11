@@ -6,7 +6,7 @@ import string
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
-
+import torchvision
 from collections import defaultdict
 import os
 import numpy as np
@@ -44,7 +44,10 @@ class AdvancedQRDataset(Dataset):
         self.char_to_index, self.index_to_char = _make_char_set(config.alphabet)
         self.data = None
         self.qr_size = config.image_size #full_config.model.input_size
+        self.final_size = full_config.model.input_size
+        self.resize_op = torchvision.transforms.Resize(self.final_size)
         self.coordconv = config.coordconv
+
 
         self.max_message_len = config.max_message_len
         if "background_image_path" in config:
@@ -256,11 +259,15 @@ class AdvancedQRDataset(Dataset):
         else:
             img_dict["image"] = FACTOR(data_utils.img2tensor(img_dict["image_undistorted"]))
 
+        if self.qr_size[0] != self.final_size[0]:
+            img_dict["image"] = self.resize_op(img_dict["image"])
+
         # Add coordconv
         if self.coordconv:
             img_dict["image"] = self.add_coordconv(img_dict["image"])
         # print(img_dict["image"])
         # stop
+
         return img_dict
 
 def _make_char_set(all_char_string):
