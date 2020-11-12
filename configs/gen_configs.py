@@ -12,7 +12,7 @@ config_prime = edict(json.load(Path("./DEFAULT.conf").open()))
 
 for coord_conv in True,False:
     for alphabet in [string.digits,string.digits+string.ascii_lowercase]:
-        for architecture in ["resnet", "default"]:
+        for architecture in ["default"]: #["resnet", "default"]:
             config = deepcopy(config_prime)
             if architecture == "default":
                 config.arch = "DecoderCNN"
