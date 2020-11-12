@@ -14,6 +14,23 @@ from model.clear_grad import ClearGrad
 #from model.autoencoder import Encoder, EncoderSm, Encoder2, Encoder3, Encoder32
 import torchvision.utils as vutils
 
+from model.style_gan2_losses import d_logistic_loss, d_r1_loss, g_nonsaturating_loss, g_path_regularize
+
+def make_noise(batch, latent_dim, n_noise, device):
+    if n_noise == 1:
+        return torch.randn(batch, latent_dim, device=device)
+
+    noises = torch.randn(n_noise, batch, latent_dim, device=device).unbind(0)
+
+    return noises
+
+
+def mixing_noise(batch, latent_dim, prob, device):
+    if prob > 0 and random.random() < prob:
+        return make_noise(batch, latent_dim, 2, device)
+
+    else:
+        return [make_noise(batch, latent_dim, 1, device)]
 
 class QRGenTrainer(BaseTrainer):
     """
@@ -37,7 +54,7 @@ class QRGenTrainer(BaseTrainer):
                 self.loss_params[lossname]={}
         self.lossWeights = config['loss_weights'] if 'loss_weights' in config else {"auto": 1, "recog": 1}
         if data_loader is not None:
-            self.batch_size = data_loader.batch_size
+            batch_size_size = data_loader.batch_size
             self.data_loader = data_loader
             if 'refresh_data' in dir(self.data_loader.dataset):
                 self.data_loader.dataset.refresh_data(None,None,self.logged)
@@ -164,14 +181,24 @@ class QRGenTrainer(BaseTrainer):
 
 
 
-        if 'alt_data_loader' in config:
-            alt_config={'data_loader': config['alt_data_loader'],'validation':{}}
-            self.alt_data_loader, alt_valid_data_loader = getDataLoader(alt_config,'train')
-            self.alt_data_loader_iter = iter(self.alt_data_loader)
-        if 'triplet_data_loader' in config:
-            triplet_config={'data_loader': config['triplet_data_loader'],'validation':{}}
-            self.triplet_data_loader, triplet_valid_data_loader = getDataLoader(triplet_config,'train')
-            self.triplet_data_loader_iter = iter(self.triplet_data_loader)
+        #StyleGAN2 parameters
+        self.StyleGAN2 = True
+        self.path_batch_shrink = 2
+        self.mixing = 0.9
+        self.channel_multiplier=2
+        self.r1=10
+        self.path_regularize=2
+        self.mean_path_length=0
+
+
+        self.modulate_pixel_loss = config['trainer']['modulate_pixel_loss'] if 'modulate_pixel_loss' in config['trainer'] else None
+        if self.modulate_pixel_loss=='momentum':
+            self.pixel_momentum_B=0.9
+            self.proper_accept=0.2
+            self.pixel_weight_delta=0
+            self.pixel_weight_rate=0.1
+            self.pixel_thresh_delta=0
+            self.pixel_thresh_rate=0.01
 
 
     def _to_tensor(self, data):
@@ -450,7 +477,7 @@ class QRGenTrainer(BaseTrainer):
             for m in self.model.parameters():
                 assert(not torch.isnan(m).any())
 
-            if 'disc' in lesson or 'auto-disc' in lesson or 'disc-style' in lesson or 'author-train' in lesson:
+            if 'disc' in lesson or 'auto-disc' in lesson or 'disc-style' in lesson or 'author-train' in lesson or 'disc_reg' in lesson:
                 self.optimizer_discriminator.step()
             elif  any(['auto-style' in l for l in lesson]):
                 self.optimizer_gen_only.step()
@@ -584,8 +611,16 @@ class QRGenTrainer(BaseTrainer):
 
         losses = {}
 
-        if 'gen' in lesson or 'disc' in lesson or 'gen' in get:
-            gen_image = self.model(qr_image) #TODO
+        if 'gen_reg' in lesson:
+            path_batch_size = max(1, batch_size // self.path_batch_shrink)
+            qr_image = qr_image[:path_batch_size]
+            noise = mixing_noise(path_batch_size, self.model.style_dim, self.mixing, qr_image.device)
+            gen_image, latents = self.model(qr_image,noise,return_latent=True)
+            if self.sample_disc and 'eval' not in lesson and 'valid' not in lesson:
+                self.add_gen_sample(gen_image)
+        elif 'gen' in lesson or 'disc' in lesson or 'gen' in get:
+            noise = mixing_noise(batch_size, self.model.style_dim, self.mixing, qr_image.device)
+            gen_image = self.model(qr_image,noise) #TODO
 
             if self.sample_disc and 'eval' not in lesson and 'valid' not in lesson:
                 self.add_gen_sample(gen_image)
@@ -608,7 +643,7 @@ class QRGenTrainer(BaseTrainer):
 
 
         #Get generated and real data to match sizes
-        if 'sample-disc' in lesson or 'disc' in lesson:
+        if 'sample-disc' in lesson or 'disc' in lesson or 'disc_reg' in lesson:
             real = instance['image']
             if self.with_cuda:
                 real = real.to(self.gpu)
@@ -621,6 +656,12 @@ class QRGenTrainer(BaseTrainer):
         else:
             fake = gen_image #could append normal QR images here
 
+        if 'disc_reg' in lesson:
+            real.requires_grad = True
+            real_pred = self.model.discriminator(real)
+            r1_loss = d_r1_loss(real_pred, real)
+            losses['disc_regLoss'] = self.r1 / 2 * r1_loss * self.curriculum.d_reg_every + 0 * real_pred[0]
+
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
             #if fake.size(3)>real.size(3):
@@ -630,43 +671,55 @@ class QRGenTrainer(BaseTrainer):
             #    diff = -(fake.size(3)-real.size(3))
             #    fake = F.pad(fake,(0,diff,0,0),'replicate')
             #    #real = real[:,:,:,:-diff]
-
-            discriminator_pred = self.model.discriminator(torch.cat((real,fake),dim=0).detach(),True)
-            if self.WGAN:
-                #Improved W-GAN
-                assert(len(discriminator_pred)==1)
-                disc_pred_real = discriminator_pred[0][:image.size(0)].mean()
-                disc_pred_fake = discriminator_pred[0][image.size(0):].mean()
-                ep = torch.empty(batch_size).uniform_()
-                ep = ep[:,None,None,None].expand(image.size(0),image.size(1),image.size(2),image.size(3)).cuda()
-                hatImgs = ep*image.detach() + (1-ep)*fake.detach()
-                hatImgs.requires_grad_(True)
-                disc_interpolates = self.model.discriminator(None,None,hatImgs)[0]
-                gradients = autograd.grad(outputs=disc_interpolates, inputs=hatImgs,
-                              grad_outputs=torch.ones(disc_interpolates.size()).cuda(),
-                              create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-                gradients = gradients.view(gradients.size(0), -1)                              
-                grad_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * 10#gp_lambda
-
-                disc_loss = disc_pred_fake - disc_pred_real + grad_penalty
-            elif self.DCGAN:
-                disc_loss=0
-                for i in range(len(discriminator_pred)): #iterate over different disc losses
-                    discriminator_pred_on_real = torch.sigmoid(discriminator_pred[i][:image.size(0)])
-                    discriminator_pred_on_fake = torch.sigmoid(discriminator_pred[i][image.size(0):])
-                    disc_loss += F.binary_cross_entropy(discriminator_pred_on_real,torch.ones_like(discriminator_pred_on_real)) +  F.binary_cross_entropy(discriminator_pred_on_fake,torch.zeros_like(discriminator_pred_on_fake))
-
+            if self.StyleGAN2:
+                fake_pred=self.model.discriminator(fake.detach())
+                real_pred=self.model.discriminator(real)
+                disc_loss = d_logistic_loss(real_pred, fake_pred)
             else:
-                #DEFAULT: hinge loss. Probably the best
-                disc_loss=0
-                for i in range(len(discriminator_pred)): #iterate over different disc losses (scales)
-                    discriminator_pred_on_real = discriminator_pred[i][:real.size(0)]
-                    discriminator_pred_on_fake = discriminator_pred[i][real.size(0):]
-                    disc_loss += F.relu(1.0 - discriminator_pred_on_real).mean() + F.relu(1.0 + discriminator_pred_on_fake).mean()
-                disc_loss /= len(discriminator_pred)
+                discriminator_pred = self.model.discriminator(torch.cat((real,fake),dim=0).detach(),True)
+                if self.WGAN:
+                    #Improved W-GAN
+                    assert(len(discriminator_pred)==1)
+                    disc_pred_real = discriminator_pred[0][:image.size(0)].mean()
+                    disc_pred_fake = discriminator_pred[0][image.size(0):].mean()
+                    ep = torch.empty(batch_size).uniform_()
+                    ep = ep[:,None,None,None].expand(image.size(0),image.size(1),image.size(2),image.size(3)).cuda()
+                    hatImgs = ep*image.detach() + (1-ep)*fake.detach()
+                    hatImgs.requires_grad_(True)
+                    disc_interpolates = self.model.discriminator(None,None,hatImgs)[0]
+                    gradients = autograd.grad(outputs=disc_interpolates, inputs=hatImgs,
+                                  grad_outputs=torch.ones(disc_interpolates.size()).cuda(),
+                                  create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+                    gradients = gradients.view(gradients.size(0), -1)                              
+                    grad_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * 10#gp_lambda
+
+                    disc_loss = disc_pred_fake - disc_pred_real + grad_penalty
+                elif self.DCGAN:
+                    disc_loss=0
+                    for i in range(len(discriminator_pred)): #iterate over different disc losses
+                        discriminator_pred_on_real = torch.sigmoid(discriminator_pred[i][:image.size(0)])
+                        discriminator_pred_on_fake = torch.sigmoid(discriminator_pred[i][image.size(0):])
+                        disc_loss += F.binary_cross_entropy(discriminator_pred_on_real,torch.ones_like(discriminator_pred_on_real)) +  F.binary_cross_entropy(discriminator_pred_on_fake,torch.zeros_like(discriminator_pred_on_fake))
+                else:
+                    #DEFAULT: hinge loss. Probably the best
+                    disc_loss=0
+                    for i in range(len(discriminator_pred)): #iterate over different disc losses (scales)
+                        discriminator_pred_on_real = discriminator_pred[i][:real.size(0)]
+                        discriminator_pred_on_fake = discriminator_pred[i][real.size(0):]
+                        disc_loss += F.relu(1.0 - discriminator_pred_on_real).mean() + F.relu(1.0 + discriminator_pred_on_fake).mean()
+                    disc_loss /= len(discriminator_pred)
 
             losses['discriminatorLoss']=disc_loss
+
+        if 'gen_reg' in lesson:
+            path_batch_size = max(1, batch_size // self.path_batch_shrink)
+            path_loss, self.mean_path_length, path_lengths = g_path_regularize(
+                    fake, latents, self.mean_path_length)
+            weighted_path_loss = self.path_regularize * self.curriculum.g_reg_every * path_loss
+            if self.path_batch_shrink:
+               weighted_path_loss += 0 * fake[0, 0, 0, 0]
+            losses['gen_regLoss'] = weighted_path_loss
 
         if ('gen' in lesson or 'auto-gen' in lesson) and 'eval' not in lesson:
             #WHERE GENERATOR LOSS IS COMPUTED
@@ -679,6 +732,8 @@ class QRGenTrainer(BaseTrainer):
                     gen_loss = F.binary_cross_entropy(gp,torch.ones_like(gp))
                     if 'disc' in get:
                         predicted_disc.append(gp.mean(dim=1).detach().cpu())
+            elif self.StyleGAN2:
+                losses['generatorLoss']=g_nonsaturating_loss(gen_pred)
             else:
                 for gp in gen_pred: #scales (i believe)
                     gen_loss -= gp.mean()
@@ -687,26 +742,44 @@ class QRGenTrainer(BaseTrainer):
                             predicted_disc.append(gp.mean(dim=1).detach().cpu())
                         else:
                             predicted_disc.append(gp.detach().cpu())
-            gen_loss/=len(gen_pred)
-            losses['generatorLoss']=gen_loss
+                gen_loss/=len(gen_pred)
+                losses['generatorLoss']=gen_loss
         else:
             predicted_disc=None
 
-        if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
-            losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
         if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
             correctly_decoded=0
 
             for b in range(batch_size):
-                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(2,0,1).numpy())
+                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy())
+                #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
+                #readA = util.zbar_decode(qqq)
+                #assert(readA==instance['gt_char'][b])
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                 #else:
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
-            log={'proper_QR':correctly_decoded/batch_size}
+                proper_ratio = correctly_decoded/batch_size
+            log={'proper_QR':proper_ratio}
+            if self.modulate_pixel_loss=='momentum' and 'valid' not in lesson and 'eval' not in lesson:
+                self.pixel_weight_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_weight_delta
+                self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
+                self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.0001),4.0)
+
+                self.pixel_thresh_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_thresh_delta
+                self.loss_params['pixel']['threshold'] -= self.pixel_thresh_delta*self.pixel_thresh_rate
+                self.loss_params['pixel']['threshold'] = min(max(self.loss_params['pixel']['threshold'],0.0),1.5)
+                #This here is my hack method of allowing the training to resume at the same weight and thresh
+                self.config['loss_weights']['pixel']=self.lossWeights['pixel']
+                self.config['loss_params']['pixel']['threshold']=self.loss_params['pixel']['threshold']
+                print('proper:{}  pixel loss weight:{}, threshold:{}'.format(proper_ratio,self.lossWeights['pixel'],self.loss_params['pixel']['threshold']))
+
         else:
             log={}
+
+        if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
+            losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
         if get:
             if (len(get)>1 or get[0]=='style') and 'name' in instance:

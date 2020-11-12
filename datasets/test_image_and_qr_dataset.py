@@ -62,7 +62,8 @@ if __name__ == "__main__":
     data=image_and_qr_dataset.ImageAndQRDataset(dirPath=dirPath,split='train',config={
         'QR_dataset':{
             'data_set_name': 'SimpleQRDataset',
-		"final_size": 256
+		"final_size": 256,
+                "total_random": 17
             },
         'image_dataset_name': 'LSUN',
         'image_class': 'bedroom'

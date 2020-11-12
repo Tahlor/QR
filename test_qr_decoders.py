@@ -19,7 +19,7 @@ def zbar_decode(img):
     else:
         return [r.data.decode("utf-8") for r in res]
 
-def makeQR(text):
+def makeQR(text,size=None):
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -30,8 +30,16 @@ def makeQR(text):
     qr.make(fit=True)
 
     img = qr.make_image(fill_color="black", back_color="white")
-    return np.array(img)[:,:,None].repeat(3,axis=2).astype(np.uint8)*255
+    img = np.array(img)[:,:,None].repeat(3,axis=2).astype(np.uint8)*255
+    if size is not None:
+        img = cv2.resize(img,(size,size),degree=0)
+    return img
     #img.save("tmp1.png")
+def contrast(qr_img,amount):
+    qr_img = np.copy(qr_img)
+    qr_img=qr_img*(1-amount)
+    qr_img+=amount/2
+    return qr_img
 
 def superimpose(background_img, qr_img, threshold, output_folder="images/superimposed"):
     """
@@ -77,15 +85,17 @@ if __name__=='__main__':
     for text in test_strings:
         results=defaultdict(lambda: 0)
         avg_max_interpolation = defaultdict(list)
-        qr_image = makeQR(text)
+        qr_image = makeQR(text,256)
         for f in images:
             background = cv2.imread(str(f))
+            background = cv2.resize(background,(256,256))
             for name,qr in qr_decoders.items():
                 qr_d = qr_decode[name]
 
                 max_hit=0
                 for p in range(20):
                     s = superimpose(background, qr_image, round(p*.05,2))
+                    #s = contrast(qr_image,round(p*.05,2))
                     res = qr_d(qr,s)
                     #print('{} {} : {}'.format(p*.05,name,res))
                     if res==text:

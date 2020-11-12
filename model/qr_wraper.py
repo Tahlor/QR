@@ -13,7 +13,9 @@ from .decoder_cnn import DecoderCNN
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt
 from .style_gan import GrowGen, GrowDisc
+from .style_gan2 import SG2Generator, SG2Discriminator
 from .grow_gen_u import GrowGenU
+from .style_gan2_u_gen import SG2UGen
 
 
 
@@ -71,6 +73,10 @@ class QRWraper(BaseModel):
             self.generator = GrowGenU(style_dim)
         elif 'Grow' in config['generator']:
             self.generator = GrowGen(style_dim)
+        elif 'SG2UGen' in config['generator']:
+            self.generator = SG2UGen(256,style_dim,8,channel_multiplier=2)
+        elif 'StyleGAN2' in config['generator']:
+            self.generator = SG2Generator(256,style_dim,8,channel_multiplier=2)
         else:
             raise NotImplementedError('Unknown generator: {}'.format(config['generator']))
 
@@ -93,6 +99,8 @@ class QRWraper(BaseModel):
                 self.discriminator=HybridDiscriminator(use_minibatch_stat=use_minibatch_stat)
             elif 'Grow' in config['discriminator']:
                 self.discriminator=GrowDisc()
+            elif 'StyleGAN2' in config['discriminator']:
+                self.discriminator=SG2Discriminator(256,channel_multiplier=2)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 
@@ -105,10 +113,12 @@ class QRWraper(BaseModel):
             self.discriminator.load_state_dict( discriminator_state_dict )
 
 
-    def forward(self,qr_image,style=None,step=0, alpha=-1):
+    def forward(self,qr_image,style=None,step=None, alpha=None,return_latent=False):
         batch_size = qr_image.size(0)
         if style is None:
             style = torch.FloatTensor(batch_size,self.style_dim).normal_().to(qr_image.device)
-        gen_img = self.generator(qr_image,style,step,alpha)
-        return gen_img
-
+        if step is not None:
+            gen_img = self.generator(qr_image,style,step,alpha)
+            return gen_img
+        else:
+            return self.generator(qr_image,style,return_latents=return_latent)

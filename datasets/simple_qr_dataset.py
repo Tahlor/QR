@@ -11,7 +11,7 @@ import math, random
 import qrcode
 import utils.img_f as img_f
 
-import random
+import random, string
 PADDING_CONSTANT = -1
 
 def collate(batch):
@@ -26,37 +26,52 @@ def collate(batch):
 class SimpleQRDataset(Dataset):
     def __init__(self, dirPath,split,config):
 
-        self.char_to_index={'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'\0':0}
-        self.index_to_char={v:k for k,v in self.char_to_index.items()}
 
         self.final_size = config['final_size'] if 'final_size' in config else None
         
-
-        random.seed(123)
-        val_indexes = [random.randrange(0,10000) for i in range(200)]
-        if split != 'train':
-            self.indexes=val_indexes
-            random.seed()
+        if 'total_random' in config or 'str_len' in config:
+            self.str_len = config['total_random'] if 'total_random' in config else config['str_len']
+            self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
+            self.char_to_index={char:n+1 for n,char in enumerate(self.characters)}
+            self.char_to_index['\0']=0 #0 is actually reserved for predicting blank chars
         else:
-            self.indexes = list(range(10000))
-            val_indexes.sort(reverse=True)
-            for v in val_indexes:
-                del self.indexes[v]
+            self.str_len = None
+            self.char_to_index={'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'\0':0}
+
+            random.seed(123)
+            val_indexes = [random.randrange(0,10000) for i in range(200)]
+            if split != 'train':
+                self.indexes=val_indexes
+                random.seed()
+            else:
+                self.indexes = list(range(10000))
+                val_indexes.sort(reverse=True)
+                for v in val_indexes:
+                    del self.indexes[v]
+
+        self.index_to_char={v:k for k,v in self.char_to_index.items()}
 
     def __len__(self):
-        return len(self.indexes)
+        if self.str_len is None:
+            return len(self.indexes)
+        else:
+            return 10000
 
     def __getitem__(self, idx):
 
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=3,
+            box_size=1,
             border=2,
         )
-        if self.indexes is not None:
-            idx = self.indexes[idx]
-        gt_char = '{}'.format(idx)
+        if self.str_len is not None:
+            length = random.randrange(4,self.str_len+1)
+            gt_char = ''.join(random.choice(self.characters) for i in range(length))
+        else:
+            if self.indexes is not None:
+                idx = self.indexes[idx]
+            gt_char = '{}'.format(idx)
         qr.add_data(gt_char)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")

@@ -10,6 +10,8 @@ class Curriculum:
         self.need_sep_style_ex_opt = False
         self.need_style_in_disc = False
         self.sample_disc=False
+        self.g_reg_every=0
+        self.d_reg_every=0
         if lesson_desc==0:
             self.lessons=[]
         else:
@@ -20,6 +22,10 @@ class Curriculum:
                     new_lesson = []
                     for a in lesson:
                         if type(a) is str:
+                            if 'gen_reg' in a:
+                                self.g_reg_every+=1
+                            if 'disc_reg' in a:
+                                self.d_reg_every+=1
                             if 'auto-style' in a:
                                 self.need_sep_gen_opt = True
                             if 'style-ex-only' in a:
@@ -46,6 +52,9 @@ class Curriculum:
         self.valid.append('valid')
         self.eval = list(self.eval)
         self.eval.append('eval')
+
+        self.g_reg_every = round((len(lessons)-self.g_reg_every)/self.g_reg_every)
+        self.d_reg_every = round((len(lessons)-self.d_reg_every)/self.d_reg_every)
 
     def getLesson(self,iteration):
         while len(self.lessons)>0 and iteration>=self.lessons[-1][0]:
