@@ -112,7 +112,7 @@
         "new_gen_freq": 0.8,
         "forget_new_freq": 0.95,
         "balance_loss": "sign_preserve_var",
-        "balance_var_x": {"0":[]},
+        "balance_var_x": {"0":["pixel"]},
 
         "use_learning_schedule": false,
 

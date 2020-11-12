@@ -86,7 +86,7 @@ if __name__=='__main__':
         results=defaultdict(lambda: 0)
         avg_max_interpolation = defaultdict(list)
         qr_image = makeQR(text,256)
-        for f in images:
+        for imN,f in enumerate(images):
             background = cv2.imread(str(f))
             background = cv2.resize(background,(256,256))
             for name,qr in qr_decoders.items():
@@ -94,14 +94,20 @@ if __name__=='__main__':
 
                 max_hit=0
                 for p in range(20):
-                    s = superimpose(background, qr_image, round(p*.05,2))
-                    #s = contrast(qr_image,round(p*.05,2))
-                    res = qr_d(qr,s)
+                    mix = round(p*.05,2)
+                    #s = superimpose(background, qr_image, mix)
+                    s = contrast(qr_image,round(p*.05,2))
+                    cv2.imwrite('tmp.png',s)
+                    s_ = cv2.imread('tmp.png')
+                    res = qr_d(qr,s_)
+                    #if mix>0.5:
+                    #    import pdb;pdb.set_trace()
                     #print('{} {} : {}'.format(p*.05,name,res))
                     if res==text:
                         results[name]+=1
                         #s.rename(s.parent / (s.stem + "_DECODED" + s.suffix))
-                        max_hit = max(max_hit,p*.05)
+                        max_hit = max(max_hit,mix)
+                        cv2.imwrite('got_this2/cont{}_{}_{}.png'.format(len(text),imN,p),s)
                 avg_max_interpolation[name].append(max_hit)
         print('For text: {} ========='.format(text))
         for name,count in results.items():

@@ -14,8 +14,10 @@ class SG2UGen(nn.Module):
         channel_multiplier=2,
         blur_kernel=[1, 3, 3, 1],
         lr_mlp=0.01,
+        predict_offset=False
     ):
         super().__init__()
+        self.predict_offset=predict_offset
 
         self.size = size
 
@@ -221,7 +223,9 @@ class SG2UGen(nn.Module):
 
             i += 2
 
-        image = skip
+        image = F.tanh(skip)
+        if self.predict_offset:
+            image += qr_image
 
         if return_latents:
             return image, latent

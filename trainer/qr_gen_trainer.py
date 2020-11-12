@@ -193,12 +193,15 @@ class QRGenTrainer(BaseTrainer):
 
         self.modulate_pixel_loss = config['trainer']['modulate_pixel_loss'] if 'modulate_pixel_loss' in config['trainer'] else None
         if self.modulate_pixel_loss=='momentum':
-            self.pixel_momentum_B=0.9
-            self.proper_accept=0.2
+            self.pixel_momentum_B_good=0.9 if 'pixel_momentum_B' not in config['trainer'] else config['trainer']['pixel_momentum_B']
+            self.pixel_momentum_B_bad = self.pixel_momentum_B_good/2
+            self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
             self.pixel_weight_delta=0
             self.pixel_weight_rate=0.1
             self.pixel_thresh_delta=0
             self.pixel_thresh_rate=0.01
+        elif self.modulate_pixel_loss=='bang':
+            self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
 
 
     def _to_tensor(self, data):
@@ -325,7 +328,9 @@ class QRGenTrainer(BaseTrainer):
             return {}
         #TODO rewrite these for the losses we need to balance (probably just QR reading and validation)
         loss=0
-        qrLoss=0
+        charLoss=0
+        validLoss=0
+        pixelLoss=0
         #authorClassLoss=0
         #autoGenLoss=0
         for name in losses.keys():
@@ -333,15 +338,19 @@ class QRGenTrainer(BaseTrainer):
             #if self.balance_loss and 'generator' in name and 'auto-gen' in lesson:
             #    autoGenLoss += losses[name]
             #elif self.balance_loss and 'Recog' in name:
-            #    qrLoss += losses[name]
+            #    charLoss += losses[name]
             #elif self.balance_loss and 'authorClass' in name:
             #    authorClassLoss += losses[name]
-            if self.balance_loss and 'char' in name or 'valid' in name:
-                qrLoss += losses[name]
+            if self.balance_loss and 'char' in name:
+                charLoss += losses[name]
+            elif self.balance_loss and 'valid' in name:
+                validLoss += losses[name]
+            elif self.balance_loss and 'pixel' in name:
+                pixelLoss += losses[name]
             else:
                 loss += losses[name]
             losses[name] = losses[name].item()
-        losses_to_balance = [qrLoss]
+        losses_to_balance = [charLoss,validLoss,pixelLoss]
         if (loss!=0 and (torch.isnan(loss) or torch.isinf(loss))):
             print(losses)
         assert(loss==0 or (not torch.isnan(loss) and not torch.isinf(loss)))
@@ -365,6 +374,7 @@ class QRGenTrainer(BaseTrainer):
                             saved_grad.append(p.grad.clone())
                             p.grad.zero_()
                     self.saved_grads.append(saved_grad)
+
         else:
             for b_loss in losses_to_balance:
                 loss += b_loss
@@ -415,6 +425,8 @@ class QRGenTrainer(BaseTrainer):
             for gi,saved_grad in enumerate(self.saved_grads):
                 if self.balance_loss.startswith('sign_preserve_var'):
                     x=multipliers[gi]
+                    if type(x) is str:
+                        x=self.lossWeights[x]
                 for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
                     if R is not None:
                         assert(not torch.isnan(p.grad).any())
@@ -752,34 +764,44 @@ class QRGenTrainer(BaseTrainer):
             correctly_decoded=0
 
             for b in range(batch_size):
-                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy())
+                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy().astype(np.uint8))
                 #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
                 #readA = util.zbar_decode(qqq)
                 #assert(readA==instance['gt_char'][b])
+                #import pdb;pdb.set_trace()
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                 #else:
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size
             log={'proper_QR':proper_ratio}
-            if self.modulate_pixel_loss=='momentum' and 'valid' not in lesson and 'eval' not in lesson:
-                self.pixel_weight_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_weight_delta
-                self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
-                self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.0001),4.0)
+            if 'valid' not in lesson and 'eval' not in lesson:
+                if self.modulate_pixel_loss=='momentum':
+                    if proper_ratio>=self.proper_accept:
+                        self.pixel_weight_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_weight_delta
+                        self.pixel_thresh_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_thresh_delta
+                    else:
+                        self.pixel_weight_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_weight_delta
+                        self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
 
-                self.pixel_thresh_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_thresh_delta
-                self.loss_params['pixel']['threshold'] -= self.pixel_thresh_delta*self.pixel_thresh_rate
-                self.loss_params['pixel']['threshold'] = min(max(self.loss_params['pixel']['threshold'],0.0),1.5)
-                #This here is my hack method of allowing the training to resume at the same weight and thresh
-                self.config['loss_weights']['pixel']=self.lossWeights['pixel']
-                self.config['loss_params']['pixel']['threshold']=self.loss_params['pixel']['threshold']
-                print('proper:{}  pixel loss weight:{}, threshold:{}'.format(proper_ratio,self.lossWeights['pixel'],self.loss_params['pixel']['threshold']))
+                    self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
+                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.1),2.5)
+
+                    self.loss_params['pixel']['threshold'] -= self.pixel_thresh_delta*self.pixel_thresh_rate
+                    self.loss_params['pixel']['threshold'] = min(max(self.loss_params['pixel']['threshold'],0.00001),1.0)
+                    #This here is my hack method of allowing the training to resume at the same weight and thresh
+                    self.config['loss_weights']['pixel']=self.lossWeights['pixel']
+                    self.config['loss_params']['pixel']['threshold']=self.loss_params['pixel']['threshold']
+                    print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,self.loss_params['pixel']['threshold'],self.pixel_thresh_delta))
+                #elif self.modulate_pixel_loss=='bang':
+
 
         else:
             log={}
 
         if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
-            losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
+            if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept:
+                losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
         if get:
             if (len(get)>1 or get[0]=='style') and 'name' in instance:
