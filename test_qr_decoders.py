@@ -32,6 +32,11 @@ def makeQR(text):
     img = qr.make_image(fill_color="black", back_color="white")
     return np.array(img)[:,:,None].repeat(3,axis=2).astype(np.uint8)*255
     #img.save("tmp1.png")
+def contrast(qr_img,amount):
+    qr_img = np.copy(qr_img)
+    qr_img=qr_img*(1-amount)
+    qr_img+=amount/2
+    return qr_img
 
 def superimpose(background_img, qr_img, threshold, output_folder="images/superimposed"):
     """
@@ -85,7 +90,8 @@ if __name__=='__main__':
 
                 max_hit=0
                 for p in range(20):
-                    s = superimpose(background, qr_image, round(p*.05,2))
+                    #s = superimpose(background, qr_image, round(p*.05,2))
+                    s = contrast(qr_image,round(p*.05,2))
                     res = qr_d(qr,s)
                     #print('{} {} : {}'.format(p*.05,name,res))
                     if res==text:
