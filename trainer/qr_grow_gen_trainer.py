@@ -633,7 +633,7 @@ class QRGrowGenTrainer(BaseTrainer):
         else:
             gen_image = None
 
-        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson and self.resolution>=32:
+        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson and self.resolution>=60:
             gen_valid,gen_chars = self.model.qr_net(gen_image)
             losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
             #assert(losses['charLoss']!=0)

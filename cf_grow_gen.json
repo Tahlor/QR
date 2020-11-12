@@ -4,7 +4,7 @@
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":false,
+    "super_computer":true,
     "data_loader": {
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
@@ -52,7 +52,7 @@
     "metrics": [],
     "trainer": {
         "class": "QRGrowGenTrainer",
-        "iterations": 20000,
+        "iterations": 400000,
         "save_dir": "saved/",
         "val_step": 50000,
         "save_step": 10000,
@@ -63,7 +63,7 @@
 
 	"freeze_param_names": ["qr_net"],
         "slow_param_names": ["style_emb"],
-        "grow_step_length": 1000,
+        "grow_step_length": 30000,
 
         "curriculum": {
             "0": [     
@@ -79,8 +79,8 @@
         "use_learning_schedule": false,
 
         "print_dir": "train_out/grow_gen",
-        "serperate_print_every": 1000,
-        "print_every": 250
+        "serperate_print_every": 10000,
+        "print_every": 500
     },
     "model": {
 	"arch": "QRWraper", 

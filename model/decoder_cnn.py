@@ -45,7 +45,7 @@ class DecoderCNN(BaseModel):
         if x.size(1)==3:
             x = x.mean(dim=1)[:,None,...] #convert to grayscale
         if x.size(2)!= self.input_size[0]:
-            x = F.interpolate(x,self.input_size,mode='bilinear')
+            x = F.interpolate(x,self.input_size)
         batch_size=x.size(0)
         x=self.cnn_layers(x)
         x=x.view(batch_size,-1)
