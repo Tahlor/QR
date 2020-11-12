@@ -74,7 +74,11 @@ class QRWraper(BaseModel):
         elif 'Grow' in config['generator']:
             self.generator = GrowGen(style_dim)
         elif 'SG2UGen' in config['generator']:
-            self.generator = SG2UGen(256,style_dim,8,channel_multiplier=2)
+            if 'small' in config['generator']:
+                channel_multiplier=1
+            else:
+                channel_multiplier=2
+            self.generator = SG2UGen(256,style_dim,8,channel_multiplier=channel_multiplier)
         elif 'StyleGAN2' in config['generator']:
             self.generator = SG2Generator(256,style_dim,8,channel_multiplier=2)
         else:

@@ -10,13 +10,14 @@
 	    "QR_dataset": {
 		"data_set_name": "SimpleQRDataset",
 		"final_size": 256,
-                "str_len": 17
+                "str_len": 17,
+                "alphabet": "digits"
 	    },
 	    "image_dataset_name": "LSUN",
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 32,
+	    "batch_size": 24,
 	    "num_workers": 3
     },
 
@@ -119,15 +120,15 @@
 
         "print_dir": "train_out/sg2u_default_cconv_digits",
         "serperate_print_every": 5000,
-        "print_every": 250,
+        "print_every": 250
 
     },
     "model": {
 	"arch": "QRWraper", 
         "style_dim": 512,
-        "generator": "SG2UGen",
+        "generator": "SG2UGen small",
         "discriminator": "StyleGAN2",
-        "pretrianed_decoder": "/zgrouphome/fslg_qr/compute/qr/saved/default_cconv_digits/checkpoint-latest.pth"
+        "pretrained_qr": "saved/default_cconv_digits/checkpoint-latest.pth"
 
 
     }

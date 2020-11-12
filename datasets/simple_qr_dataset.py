@@ -31,7 +31,10 @@ class SimpleQRDataset(Dataset):
         
         if 'total_random' in config or 'str_len' in config:
             self.str_len = config['total_random'] if 'total_random' in config else config['str_len']
-            self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
+            if 'alphabet' in config and config['alphabet']=='digits':
+                self.characters = string.digits
+            else:
+                self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
             self.char_to_index={char:n+1 for n,char in enumerate(self.characters)}
             self.char_to_index['\0']=0 #0 is actually reserved for predicting blank chars
         else:
