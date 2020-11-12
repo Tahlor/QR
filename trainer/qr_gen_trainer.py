@@ -752,7 +752,10 @@ class QRGenTrainer(BaseTrainer):
             correctly_decoded=0
 
             for b in range(batch_size):
-                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(2,0,1).numpy())
+                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy())
+                #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
+                #readA = util.zbar_decode(qqq)
+                #assert(readA==instance['gt_char'][b])
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                 #else:
@@ -762,11 +765,14 @@ class QRGenTrainer(BaseTrainer):
             if self.modulate_pixel_loss=='momentum' and 'valid' not in lesson and 'eval' not in lesson:
                 self.pixel_weight_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_weight_delta
                 self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
-                self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.0001),1.5)
+                self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.0001),4.0)
 
                 self.pixel_thresh_delta = (1-self.pixel_momentum_B)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B*self.pixel_thresh_delta
                 self.loss_params['pixel']['threshold'] -= self.pixel_thresh_delta*self.pixel_thresh_rate
                 self.loss_params['pixel']['threshold'] = min(max(self.loss_params['pixel']['threshold'],0.0),1.5)
+                #This here is my hack method of allowing the training to resume at the same weight and thresh
+                self.config['loss_weights']['pixel']=self.lossWeights['pixel']
+                self.config['loss_params']['pixel']['threshold']=self.loss_params['pixel']['threshold']
                 print('proper:{}  pixel loss weight:{}, threshold:{}'.format(proper_ratio,self.lossWeights['pixel'],self.loss_params['pixel']['threshold']))
 
         else:
