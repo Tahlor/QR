@@ -10,17 +10,21 @@ from skimage.filters import gaussian, unsharp_mask
 from skimage.exposure import adjust_log
 
 def zbar_decode(img):
-    img = img.mean(axis=2)
+    #img = img.mean(axis=2)
     res=pyzbar_decode(img)
+
     if len(res)==0:
-        imgb = gaussian(img,1,preserve_range=True)
-        res=pyzbar_decode(imgb)
+        imgg = img.mean(axis=2)
+        res=pyzbar_decode(imgg)
         if len(res)==0:
-            imgc = adjust_log(img)
-            res=pyzbar_decode(imgc)
-        #if len(res)==0:
-        #    imgs = unsharp_mask(img,preserve_range=True)
-        #    res=pyzbar_decode(imgs)
+            imgb = gaussian(img,1,preserve_range=True)
+            res=pyzbar_decode(imgb)
+            if len(res)==0:
+                imgc = adjust_log(img)
+                res=pyzbar_decode(imgc)
+            #if len(res)==0:
+            #    imgs = unsharp_mask(img,preserve_range=True)
+            #    res=pyzbar_decode(imgs)
     if len(res)==0:
         return None
     elif len(res)==1:
