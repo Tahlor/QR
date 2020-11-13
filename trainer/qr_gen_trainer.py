@@ -253,7 +253,7 @@ class QRGenTrainer(BaseTrainer):
         #self.model.eval()
         #print("WARNING EVAL")
 
-        ##tic=timeit.default_timer()
+        #t#tic=timeit.default_timer()
         lesson =  self.curriculum.getLesson(iteration)
         if 'alt-data' in lesson:
             try:
@@ -390,7 +390,10 @@ class QRGenTrainer(BaseTrainer):
                 if p.grad is None:
                     saved_grad.append(None)
                 else:
-                    saved_grad.append(p.grad.clone())
+                    if p.grad.is_cuda:
+                        saved_grad.append(p.grad.cpu())
+                    else:
+                        saved_grad.append(p.grad.clone())
                     p.grad.zero_()
             self.saved_grads.append(saved_grad)
 
@@ -427,6 +430,7 @@ class QRGenTrainer(BaseTrainer):
                         x=self.lossWeights[x]
                 for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
                     if R is not None:
+                        R=R.to(p.device)
                         assert(not torch.isnan(p.grad).any())
                         if self.balance_loss=='sign_preserve': #This is good, although it assigns everything a weight of 1
                             abmean_R = torch.abs(p.grad).mean()
@@ -508,8 +512,8 @@ class QRGenTrainer(BaseTrainer):
         #    cer=0
         #    wer=0
 
-        ##toc=timeit.default_timer()
-        ##print('bac: '+str(toc-tic))
+        #t#toc=timeit.default_timer()
+        #t#print('iteration: '+str(toc-tic))
 
         #tic=timeit.default_timer()
         metrics={}
@@ -795,7 +799,7 @@ class QRGenTrainer(BaseTrainer):
                     else:
                         threshold = self.loss['pixel'].threshold
                     threshold -= self.pixel_thresh_delta*self.pixel_thresh_rate
-                    threshold = min(max(threshold,0.00001),1.0)
+                    threshold = min(max(threshold,0.01),1.0)
                     if 'threshold' in self.loss_params['pixel']:
                         self.loss_params['pixel']['threshold'] = threshold
                     else:

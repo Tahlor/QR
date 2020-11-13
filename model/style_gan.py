@@ -10,6 +10,7 @@ from torch.autograd import Function
 from math import sqrt
 
 import random
+from .coordconv import addCoords
 
 
 def init_linear(linear):
@@ -223,6 +224,10 @@ class ConvBlock(nn.Module):
     ):
         super().__init__()
 
+        self.coord_conv=coord_conv
+        if coord_conv:
+            in_channel+=2
+
         pad1 = padding
         pad2 = padding
         if padding2 is not None:
@@ -261,8 +266,8 @@ class ConvBlock(nn.Module):
             )
 
     def forward(self, input):
-        #if self.coord_conv:
-        #    input = addCoord
+        if self.coord_conv:
+            input = addCoords(input)
         out = self.conv1(input)
         out = self.conv2(out)
 
