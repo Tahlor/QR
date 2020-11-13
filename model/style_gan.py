@@ -219,6 +219,7 @@ class ConvBlock(nn.Module):
         padding2=None,
         downsample=False,
         fused=False,
+        coord_conv=False
     ):
         super().__init__()
 
@@ -260,6 +261,8 @@ class ConvBlock(nn.Module):
             )
 
     def forward(self, input):
+        #if self.coord_conv:
+        #    input = addCoord
         out = self.conv1(input)
         out = self.conv2(out)
 

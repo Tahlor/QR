@@ -6,9 +6,20 @@ import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage import draw
 from pyzbar.pyzbar import decode as pyzbar_decode
+from skimage.filters import gaussian, unsharp_mask
+from skimage.exposure import adjust_log
 
 def zbar_decode(img):
     res=pyzbar_decode(img)
+    if len(res)==0:
+        imgb = gaussian(img,1,preserve_range=True)
+        res=pyzbar_decode(imgb)
+        if len(res)==0:
+            imgc = adjust_log(img)
+            res=pyzbar_decode(imgc)
+        #if len(res)==0:
+        #    imgs = unsharp_mask(img,preserve_range=True)
+        #    res=pyzbar_decode(imgs)
     if len(res)==0:
         return None
     elif len(res)==1:

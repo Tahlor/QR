@@ -1,6 +1,6 @@
 import os
 import math
-import json, copy
+import json, copy, types
 import timeit
 import logging
 import torch
@@ -21,6 +21,19 @@ class BaseTrainer:
         self.model = model
         self.logger = logging.getLogger(self.__class__.__name__)
         self.loss = loss
+        if 'loss_params' in config:
+            self.loss_params=dict(config['loss_params'])
+        else:
+            self.loss_params={}
+        for name,l in self.loss.items():
+            if not isinstance(l,types.FunctionType):
+                #assume class
+                self.loss[name] = l(**self.loss_params[name])
+                self.loss_params[name]={}
+        for lossname in self.loss:
+            if lossname not in self.loss_params:
+                self.loss_params[lossname]={}
+        self.lossWeights = config['loss_weights'] 
         self.metrics = metrics
         self.name = config['name']
         self.logged = config['super_computer'] if 'super_computer' in config else False

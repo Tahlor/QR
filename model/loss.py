@@ -14,6 +14,7 @@ from model.dtw_loss import DTWLoss
 from model.key_loss import pushMinDist
 from torch.nn.functional import cross_entropy
 from model.triplet_loss import hardTriplet
+from model.qr_center_pixel_loss import QRCenterPixelLoss
 
 def my_loss(y_input, y_target):
     return F.nll_loss(y_input, y_target)
@@ -30,6 +31,7 @@ def CrossEntropyLoss(input,target):
 def L1Loss(input,target):
     return F.l1_loss(input,target)
 def HingeLoss(input,target,threshold):
+    import pdb;pdb.set_trace()
     diff = torch.abs(input-target)
     diff[diff<threshold] = 0
     return diff.mean()

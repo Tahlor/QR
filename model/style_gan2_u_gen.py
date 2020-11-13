@@ -14,7 +14,8 @@ class SG2UGen(nn.Module):
         channel_multiplier=2,
         blur_kernel=[1, 3, 3, 1],
         lr_mlp=0.01,
-        predict_offset=False
+        predict_offset=False,
+        coord_conv=False
     ):
         super().__init__()
         self.predict_offset=predict_offset
@@ -93,7 +94,7 @@ class SG2UGen(nn.Module):
 
             self.convs.append(
                 StyledConv(
-                    out_channel, out_channel, 3, style_dim, blur_kernel=blur_kernel
+                    out_channel, out_channel, 3, style_dim, blur_kernel=blur_kernel,coord_conv=coord_conv
                 )
             )
 
@@ -112,12 +113,12 @@ class SG2UGen(nn.Module):
         fused=True
         self.down_convs = nn.ModuleList(
             [
-                ConvBlock( self.down_channels[256], self.down_channels[128], 3, 1, downsample=True, fused=fused), #128
-                ConvBlock(self.down_channels[128], self.down_channels[64], 3, 1, downsample=True, fused=fused), #64
-                ConvBlock(self.down_channels[64], self.down_channels[32], 3, 1, downsample=True, fused=fused), #32
-                ConvBlock(self.down_channels[32], self.down_channels[16], 3, 1, downsample=True), #16
-                ConvBlock(self.down_channels[16], self.down_channels[8], 3, 1, downsample=True), #8
-                ConvBlock(self.down_channels[8], self.down_channels[4], 3, 1, downsample=True), #4
+                ConvBlock( self.down_channels[256], self.down_channels[128], 3, 1, downsample=True, fused=fused,coord_conv=coord_conv), #128
+                ConvBlock(self.down_channels[128], self.down_channels[64], 3, 1, downsample=True, fused=fused,coord_conv=coord_conv), #64
+                ConvBlock(self.down_channels[64], self.down_channels[32], 3, 1, downsample=True, fused=fused,coord_conv=coord_conv), #32
+                ConvBlock(self.down_channels[32], self.down_channels[16], 3, 1, downsample=True,coord_conv=coord_conv), #16
+                ConvBlock(self.down_channels[16], self.down_channels[8], 3, 1, downsample=True,coord_conv=coord_conv), #8
+                ConvBlock(self.down_channels[8], self.down_channels[4], 3, 1, downsample=True,coord_conv=coord_conv), #4
             ])
 
     def make_noise(self):

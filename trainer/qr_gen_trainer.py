@@ -13,6 +13,7 @@ import random, json, os
 from model.clear_grad import ClearGrad
 #from model.autoencoder import Encoder, EncoderSm, Encoder2, Encoder3, Encoder32
 import torchvision.utils as vutils
+import utils.img_f as img_f
 
 from model.style_gan2_losses import d_logistic_loss, d_r1_loss, g_nonsaturating_loss, g_path_regularize
 
@@ -45,14 +46,6 @@ class QRGenTrainer(BaseTrainer):
         super(QRGenTrainer, self).__init__(model, loss, metrics, resume, config, train_logger)
         assert(self.curriculum)
         self.config = config
-        if 'loss_params' in config:
-            self.loss_params=config['loss_params']
-        else:
-            self.loss_params={}
-        for lossname in self.loss:
-            if lossname not in self.loss_params:
-                self.loss_params[lossname]={}
-        self.lossWeights = config['loss_weights'] if 'loss_weights' in config else {"auto": 1, "recog": 1}
         if data_loader is not None:
             batch_size_size = data_loader.batch_size
             self.data_loader = data_loader
@@ -192,6 +185,7 @@ class QRGenTrainer(BaseTrainer):
 
 
         self.modulate_pixel_loss = config['trainer']['modulate_pixel_loss'] if 'modulate_pixel_loss' in config['trainer'] else None
+        self.modulate_pixel_loss_start=1000
         if self.modulate_pixel_loss=='momentum':
             self.pixel_momentum_B_good=0.9 if 'pixel_momentum_B' not in config['trainer'] else config['trainer']['pixel_momentum_B']
             self.pixel_momentum_B_bad = self.pixel_momentum_B_good/2
@@ -200,8 +194,12 @@ class QRGenTrainer(BaseTrainer):
             self.pixel_weight_rate=0.1
             self.pixel_thresh_delta=0
             self.pixel_thresh_rate=0.01
+
+            self.max_pixel_weight = 2.5 if 'max_pixel_weight' not in config['trainer'] else float(config['trainer']['max_pixel_weight'])
         elif self.modulate_pixel_loss=='bang':
             self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
+
+        self.i_cant=False
 
 
     def _to_tensor(self, data):
@@ -771,12 +769,17 @@ class QRGenTrainer(BaseTrainer):
                 #import pdb;pdb.set_trace()
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
+                elif self.i_cant:
+                    outim = ((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy().astype(np.uint8)
+                    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),outim)
                 #else:
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size
+                if proper_ratio ==1:
+                    self.i_cant=True
             log={'proper_QR':proper_ratio}
             if 'valid' not in lesson and 'eval' not in lesson:
-                if self.modulate_pixel_loss=='momentum':
+                if self.modulate_pixel_loss=='momentum' and self.iteration>self.modulate_pixel_loss_start:
                     if proper_ratio>=self.proper_accept:
                         self.pixel_weight_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_weight_delta
                         self.pixel_thresh_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_thresh_delta
@@ -785,14 +788,22 @@ class QRGenTrainer(BaseTrainer):
                         self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
 
                     self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
-                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.1),2.5)
+                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.1),self.max_pixel_weight)
 
-                    self.loss_params['pixel']['threshold'] -= self.pixel_thresh_delta*self.pixel_thresh_rate
-                    self.loss_params['pixel']['threshold'] = min(max(self.loss_params['pixel']['threshold'],0.00001),1.0)
+                    if 'threshold' in self.loss_params['pixel']:
+                        threshold = self.loss_params['pixel']['threshold']
+                    else:
+                        threshold = self.loss['pixel'].threshold
+                    threshold -= self.pixel_thresh_delta*self.pixel_thresh_rate
+                    threshold = min(max(threshold,0.00001),1.0)
+                    if 'threshold' in self.loss_params['pixel']:
+                        self.loss_params['pixel']['threshold'] = threshold
+                    else:
+                        self.loss['pixel'].threshold = threshold
                     #This here is my hack method of allowing the training to resume at the same weight and thresh
                     self.config['loss_weights']['pixel']=self.lossWeights['pixel']
-                    self.config['loss_params']['pixel']['threshold']=self.loss_params['pixel']['threshold']
-                    print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,self.loss_params['pixel']['threshold'],self.pixel_thresh_delta))
+                    self.config['loss_params']['pixel']['threshold']=threshold
+                    print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,threshold,self.pixel_thresh_delta))
                 #elif self.modulate_pixel_loss=='bang':
 
 
@@ -800,7 +811,7 @@ class QRGenTrainer(BaseTrainer):
             log={}
 
         if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
-            if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept:
+            if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept or self.iteration<self.modulate_pixel_loss_start:
                 losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 
         if get:

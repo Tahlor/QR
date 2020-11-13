@@ -10,6 +10,7 @@ from torch.nn import functional as F
 from torch.autograd import Function
 
 from utils import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
+from .coordconv import addCoords
 
 
 class PixelNorm(nn.Module):
@@ -190,15 +191,19 @@ class ModulatedConv2d(nn.Module):
         upsample=False,
         downsample=False,
         blur_kernel=[1, 3, 3, 1],
+        coord_conv=False
     ):
         super().__init__()
-
+        
+        if coord_conv:
+            in_channel+=2
         self.eps = 1e-8
         self.kernel_size = kernel_size
         self.in_channel = in_channel
         self.out_channel = out_channel
         self.upsample = upsample
         self.downsample = downsample
+        self.coord_conv=coord_conv
 
         if upsample:
             factor = 2
@@ -235,7 +240,10 @@ class ModulatedConv2d(nn.Module):
         )
 
     def forward(self, input, style):
+        if self.coord_conv:
+            input = addCoords(input)
         batch, in_channel, height, width = input.shape
+
 
         style = self.modulation(style).view(batch, 1, in_channel, 1, 1)
         weight = self.scale * self.weight * style
@@ -315,6 +323,7 @@ class StyledConv(nn.Module):
         upsample=False,
         blur_kernel=[1, 3, 3, 1],
         demodulate=True,
+        coord_conv=False
     ):
         super().__init__()
 
@@ -326,6 +335,7 @@ class StyledConv(nn.Module):
             upsample=upsample,
             blur_kernel=blur_kernel,
             demodulate=demodulate,
+            coord_conv=coord_conv
         )
 
         self.noise = NoiseInjection()
