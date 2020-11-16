@@ -105,7 +105,12 @@ class QRWraper(BaseModel):
             elif 'Grow' in config['discriminator']:
                 self.discriminator=GrowDisc()
             elif 'StyleGAN2' in config['discriminator']:
-                self.discriminator=SG2Discriminator(256,channel_multiplier=2)
+                if 'small' in config['discriminator']:
+                    channel_multiplier=1
+                else:
+                    channel_multiplier=2
+                smaller='smaller' in config['discriminator']
+                self.discriminator=SG2Discriminator(256,channel_multiplier=channel_multiplier,smaller=smaller)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 

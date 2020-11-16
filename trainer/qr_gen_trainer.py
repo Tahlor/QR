@@ -185,10 +185,10 @@ class QRGenTrainer(BaseTrainer):
 
 
         self.modulate_pixel_loss = config['trainer']['modulate_pixel_loss'] if 'modulate_pixel_loss' in config['trainer'] else None
-        self.modulate_pixel_loss_start=1000
+        self.modulate_pixel_loss_start=1000 if 'modulate_pixel_loss_start' not in config['trainer'] else config['trainer']['modulate_pixel_loss_start']
         if self.modulate_pixel_loss=='momentum':
             self.pixel_momentum_B_good=0.9 if 'pixel_momentum_B' not in config['trainer'] else config['trainer']['pixel_momentum_B']
-            self.pixel_momentum_B_bad = self.pixel_momentum_B_good/2
+            self.pixel_momentum_B_bad = self.pixel_momentum_B_good*0.4
             self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
             self.pixel_weight_delta=0
             self.pixel_weight_rate=0.1
@@ -196,10 +196,13 @@ class QRGenTrainer(BaseTrainer):
             self.pixel_thresh_rate=0.01
 
             self.max_pixel_weight = 2.5 if 'max_pixel_weight' not in config['trainer'] else float(config['trainer']['max_pixel_weight'])
+            self.min_pixel_weight = 0.1 if 'min_pixel_weight' not in config['trainer'] else float(config['trainer']['min_pixel_weight'])
         elif self.modulate_pixel_loss=='bang':
             self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
 
         self.i_cant=False
+
+        self.combine_qr_loss = False if 'combine_qr_loss' not in config['trainer'] else config['trainer']['combine_qr_loss']
 
 
     def _to_tensor(self, data):
@@ -253,7 +256,7 @@ class QRGenTrainer(BaseTrainer):
         #self.model.eval()
         #print("WARNING EVAL")
 
-        #t#tic=timeit.default_timer()
+        #t#tic=timeit.default_timer()#t#
         lesson =  self.curriculum.getLesson(iteration)
         if 'alt-data' in lesson:
             try:
@@ -348,7 +351,10 @@ class QRGenTrainer(BaseTrainer):
             else:
                 loss += losses[name]
             losses[name] = losses[name].item()
-        losses_to_balance = [charLoss,validLoss,pixelLoss]
+        if self.combine_qr_loss:
+            losses_to_balance = [charLoss+validLoss,pixelLoss] #magic order for balance_var_x param
+        else:
+            losses_to_balance = [charLoss,validLoss,pixelLoss] #magic order for balance_var_x param
         if (loss!=0 and (torch.isnan(loss) or torch.isinf(loss))):
             print(losses)
         assert(loss==0 or (not torch.isnan(loss) and not torch.isinf(loss)))
@@ -366,11 +372,14 @@ class QRGenTrainer(BaseTrainer):
                     loss_item += b_loss.item()
                     b_loss.backward(retain_graph=True)
                     for p in self.parameters:
-                        if p.grad is None:
-                            saved_grad.append(None)
-                        else:
+                        if p.grad is not None:
+                            #if p.grad.is_cuda:
+                            #    saved_grad.append(p.grad.cpu())
+                            #else:
                             saved_grad.append(p.grad.clone())
                             p.grad.zero_()
+                        else:
+                            saved_grad.append(None)
                     self.saved_grads.append(saved_grad)
 
         else:
@@ -390,10 +399,10 @@ class QRGenTrainer(BaseTrainer):
                 if p.grad is None:
                     saved_grad.append(None)
                 else:
-                    if p.grad.is_cuda:
-                        saved_grad.append(p.grad.cpu())
-                    else:
-                        saved_grad.append(p.grad.clone())
+                    #if p.grad.is_cuda:
+                    #    saved_grad.append(p.grad.cpu())
+                    #else:
+                    saved_grad.append(p.grad.clone())
                     p.grad.zero_()
             self.saved_grads.append(saved_grad)
 
@@ -430,7 +439,7 @@ class QRGenTrainer(BaseTrainer):
                         x=self.lossWeights[x]
                 for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
                     if R is not None:
-                        R=R.to(p.device)
+                        #R=R.to(p.device)
                         assert(not torch.isnan(p.grad).any())
                         if self.balance_loss=='sign_preserve': #This is good, although it assigns everything a weight of 1
                             abmean_R = torch.abs(p.grad).mean()
@@ -512,8 +521,8 @@ class QRGenTrainer(BaseTrainer):
         #    cer=0
         #    wer=0
 
-        #t#toc=timeit.default_timer()
-        #t#print('iteration: '+str(toc-tic))
+        #t#toc=timeit.default_timer()#t#
+        #t#print('iteration: '+str(toc-tic))#t#
 
         #tic=timeit.default_timer()
         metrics={}
@@ -641,7 +650,7 @@ class QRGenTrainer(BaseTrainer):
         else:
             gen_image = None
 
-        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson:
+        if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson and 'skip-qr' not in lesson:
             gen_valid,gen_chars = self.model.qr_net(gen_image)
             losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
             #assert(losses['charLoss']!=0)
@@ -792,14 +801,14 @@ class QRGenTrainer(BaseTrainer):
                         self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
 
                     self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
-                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],0.1),self.max_pixel_weight)
+                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],self.min_pixel_weight),self.max_pixel_weight)
 
                     if 'threshold' in self.loss_params['pixel']:
                         threshold = self.loss_params['pixel']['threshold']
                     else:
                         threshold = self.loss['pixel'].threshold
                     threshold -= self.pixel_thresh_delta*self.pixel_thresh_rate
-                    threshold = min(max(threshold,0.01),1.0)
+                    threshold = min(max(threshold,0.05),1.0)
                     if 'threshold' in self.loss_params['pixel']:
                         self.loss_params['pixel']['threshold'] = threshold
                     else:
@@ -814,7 +823,7 @@ class QRGenTrainer(BaseTrainer):
         else:
             log={}
 
-        if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss:
+        if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss and 'skip-pixel' not in lesson:
             if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept or self.iteration<self.modulate_pixel_loss_start:
                 losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
 

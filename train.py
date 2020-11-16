@@ -11,13 +11,12 @@ from model.metric import *
 from data_loader import getDataLoader
 from trainer import *
 from logger import Logger
-import socket
 
 def update_status(name,message,supercomputer):
-    return
-    import requests
     if supercomputer:
         return
+    import requests
+    import socket
     name = '{}: {}'.format(socket.gethostname(),name)
     try:
         proxies = {
@@ -92,7 +91,7 @@ def main(config, resume):
     signal.signal(signal.SIGINT, handleSIGINT)
 
     print("Begin training")
-    #update_status(name,'started',supercomputer)
+    update_status(name,'started',supercomputer)
     trainer.train()
 
 
@@ -108,8 +107,8 @@ if __name__ == '__main__':
                         help='path to checkpoint that may or may not exist (default: None)')
     parser.add_argument('-g', '--gpu', default=None, type=int,
                         help='gpu to use (overrides config) (default: None)')
-    #parser.add_argument('-m', '--merged', default=False, action='store_const', const=True,
-    #                    help='Use combine train and valid sets.')
+    parser.add_argument('-p', '--ping', default=False, action='store_const', const=True,
+                        help='should send updates to my ping server')
 
     args = parser.parse_args()
 
@@ -135,6 +134,7 @@ if __name__ == '__main__':
                     assert False, "Path {} already used!".format(path)
     assert config is not None
     supercomputer = config['super_computer'] if 'super_computer' in config else False
+    supercomputer = supercomputer and args.ping
 
     name=config['name']
     file_name = args.config

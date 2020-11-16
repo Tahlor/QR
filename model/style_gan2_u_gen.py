@@ -228,6 +228,9 @@ class SG2UGen(nn.Module):
         if self.predict_offset:
             image += qr_image
 
+
+        assert(not torch.isnan(image).any())
+
         if return_latents:
             return image, latent
 

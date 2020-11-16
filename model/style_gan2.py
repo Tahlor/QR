@@ -628,14 +628,13 @@ class ResBlock(nn.Module):
 
 
 class SG2Discriminator(nn.Module):
-    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1]):
+    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False):
         super().__init__()
-
         channels = {
-            4: 512,
-            8: 512,
-            4: 512,
-            8: 512,
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
             16: 256 * channel_multiplier,
             32: 128 * channel_multiplier,
             64: 64 * channel_multiplier,
