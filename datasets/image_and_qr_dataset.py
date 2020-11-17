@@ -12,6 +12,7 @@ import torchvision
 
 import utils.img_f as img_f
 from .simple_qr_dataset import SimpleQRDataset
+from .simple_image_dataset import SimpleImageDataset
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
@@ -41,6 +42,9 @@ class ImageAndQRDataset(Dataset):
             if split=='valid':
                 split='val'
             self.image_dataset = torchvision.datasets.LSUN(dirPath,classes=['{}_{}'.format(config['image_class'],split)],transform=transform)
+        elif config['image_dataset_name']=='simple':
+            self.image_dataset = SimpleImageDataset(dirPath,None,config['image_dataset_config'])
+
 
     def __len__(self):
         return max(len(self.qr_dataset),len(self.image_dataset))
@@ -52,9 +56,10 @@ class ImageAndQRDataset(Dataset):
 
         qr_data = self.qr_dataset[qr_index]
         image,target = self.image_dataset[image_index]
-
-        image = np.array(image)
-        image = (2*(torch.from_numpy(image).float()/255)-1).permute(2,0,1)
+        
+        if type(image) is not torch.Tensor:
+            image = np.array(image)
+            image = (2*(torch.from_numpy(image).float()/255)-1).permute(2,0,1)
 
         qr_image=qr_data['image']
         #if qr_image.size(1)!=image.size(1) or qr_image.size(2)!=image.size(2):

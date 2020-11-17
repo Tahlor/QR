@@ -65,8 +65,10 @@ if __name__ == "__main__":
 		"final_size": 256,
                 "total_random": 17
             },
-        'image_dataset_name': 'LSUN',
-        'image_class': 'bedroom'
+        #'image_dataset_name': 'LSUN',
+        #'image_class': 'bedroom'
+        'image_dataset_name': 'simple',
+        'image_dataset_config': {'size':256}
 })
     #data.cluster(start,repeat,'anchors_rot_{}.json')
 
