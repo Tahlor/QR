@@ -134,8 +134,8 @@
 
         "modulate_pixel_loss": "momentum",
         "modulate_pixel_loss_start": 40000,
-        "max_pixel_weight": 0.6,
-        "min_pixel_weight": 0.3,
+        "max_pixel_weight": 1.2,
+        "min_pixel_weight": 0.4,
         "pixel_momentum_B": 0.8
     },
     "model": {

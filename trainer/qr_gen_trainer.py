@@ -90,7 +90,7 @@ class QRGenTrainer(BaseTrainer):
 
         self.balance_loss = config['trainer']['balance_loss'] if 'balance_loss' in config['trainer'] else False # balance the CTC loss with others as in https://arxiv.org/pdf/1903.00277.pdf, although many of may variations (which are better)
         if self.balance_loss:
-            self.parameters = list(model.parameters())
+            self.parameters = list(model.generator.parameters()) #we only balance the generator weights
             self.balance_var_x = config['trainer']['balance_var_x'] if 'balance_var_x' in config['trainer'] else None
             if self.balance_loss.startswith('sign_preserve_x'):
                 self.balance_x = float(self.balance_loss[self.balance_loss.find('x')+1:])
@@ -370,7 +370,9 @@ class QRGenTrainer(BaseTrainer):
                 if type(b_loss) is not int:
                     saved_grad=[]
                     loss_item += b_loss.item()
+                    
                     b_loss.backward(retain_graph=True)
+
                     for p in self.parameters:
                         if p.grad is not None:
                             #if p.grad.is_cuda:
@@ -427,16 +429,17 @@ class QRGenTrainer(BaseTrainer):
                         if abmean_Ds[i]==0.0:
                             abmean_Ds[i]=nonzero
             if self.balance_loss.startswith('sign_preserve_var'):
+                sum_multipliers=1
                 for iterT,mult in self.balance_var_x.items():
                     if int(iterT)<=iteration:
                         multipliers=mult
                         if type(multipliers) is not list:
                             multipliers=[multipliers]
+                multipliers = [self.lossWeights[x] if type(x) is str else x for x in multipliers]
+                sum_multipliers+=sum(multipliers)
             for gi,saved_grad in enumerate(self.saved_grads):
                 if self.balance_loss.startswith('sign_preserve_var'):
                     x=multipliers[gi]
-                    if type(x) is str:
-                        x=self.lossWeights[x]
                 for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
                     if R is not None:
                         #R=R.to(p.device)
@@ -454,10 +457,6 @@ class QRGenTrainer(BaseTrainer):
                             abmean_R = torch.abs(R).mean()
                             if abmean_R!=0:
                                 p.grad += R*(abmean_Ds[i]/abmean_R)
-                        elif self.balance_loss=='sign_preserve_moreHWR':
-                            abmean_R = torch.abs(R).mean()
-                            if abmean_R!=0:
-                                p.grad += 2*R*(abmean_Ds[i]/abmean_R)
                         elif self.balance_loss.startswith('sign_preserve_var'): #This is the best, as you can specify a weight for each balanced term
                             abmean_R = torch.abs(R).mean()
                             if abmean_R!=0:
@@ -490,6 +489,9 @@ class QRGenTrainer(BaseTrainer):
                             raise NotImplementedError('Unknown gradient balance method: {}'.format(self.balance_loss))
                         assert(not torch.isnan(p.grad).any())
             self.saved_grads=[]
+            for p in self.parameters:
+                if p.grad is not None:
+                    p.grad/=sum_multipliers
         #for p in self.model.parameters():
         #    if p.grad is not None:
         #        assert(not torch.isnan(p.grad).any())
@@ -799,7 +801,8 @@ class QRGenTrainer(BaseTrainer):
                     else:
                         self.pixel_weight_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_weight_delta
                         self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
-
+                    
+                    init_weight=self.lossWeights['pixel']
                     self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
                     self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],self.min_pixel_weight),self.max_pixel_weight)
 
@@ -816,7 +819,8 @@ class QRGenTrainer(BaseTrainer):
                     #This here is my hack method of allowing the training to resume at the same weight and thresh
                     self.config['loss_weights']['pixel']=self.lossWeights['pixel']
                     self.config['loss_params']['pixel']['threshold']=threshold
-                    print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,threshold,self.pixel_thresh_delta))
+                    if init_weight != self.lossWeights['pixel']:
+                        print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,threshold,self.pixel_thresh_delta))
                 #elif self.modulate_pixel_loss=='bang':
 
 
