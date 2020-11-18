@@ -775,7 +775,7 @@ class QRGenTrainer(BaseTrainer):
 
         if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
             correctly_decoded=0
-            prepared_images = (gen_image+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
+            prepared_images = ((gen_image+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
             for b in range(batch_size):
                 read = util.zbar_decode(prepared_images[b])
                 #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
@@ -974,7 +974,7 @@ class QRGenTrainer(BaseTrainer):
 
     def print_images(self,images,text,disc=None,typ='gen',gtImages=None):
         if self.print_dir is not None:
-            images = images.detach()
+            images = images.clamp(-1,1).detach()
             nrow = max(1,2048//images.size(3))
             if self.iteration-self.last_print_images[typ]>=self.serperate_print_every:
                 iterP = self.iteration
