@@ -79,7 +79,8 @@ class QRWraper(BaseModel):
             else:
                 channel_multiplier=2
             coord_conv = 'oord' in config['generator']
-            self.generator = SG2UGen(256,style_dim,8,channel_multiplier=channel_multiplier,coord_conv=coord_conv)
+            use_tanh = 'unbound' not in config['generator']
+            self.generator = SG2UGen(256,style_dim,8,channel_multiplier=channel_multiplier,coord_conv=coord_conv,use_tanh=use_tanh)
         elif 'StyleGAN2' in config['generator']:
             self.generator = SG2Generator(256,style_dim,8,channel_multiplier=2)
         else:

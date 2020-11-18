@@ -15,10 +15,12 @@ class SG2UGen(nn.Module):
         blur_kernel=[1, 3, 3, 1],
         lr_mlp=0.01,
         predict_offset=False,
-        coord_conv=False
+        coord_conv=False,
+        use_tanh=True
     ):
         super().__init__()
         self.predict_offset=predict_offset
+        self.use_tanh=use_tanh
 
         self.size = size
 
@@ -223,8 +225,10 @@ class SG2UGen(nn.Module):
             skip = to_rgb(out, latent[:, i + 2], skip)
 
             i += 2
-
-        image = F.tanh(skip)
+        if self.use_tanh:
+            image = F.tanh(skip)
+        else:
+            image = skip
         if self.predict_offset:
             image += qr_image
 

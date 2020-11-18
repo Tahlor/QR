@@ -773,9 +773,9 @@ class QRGenTrainer(BaseTrainer):
 
         if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
             correctly_decoded=0
-
+            prepared_images = (gen_image+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
             for b in range(batch_size):
-                read = util.zbar_decode(((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy().astype(np.uint8))
+                read = util.zbar_decode(prepared_images[b])
                 #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
                 #readA = util.zbar_decode(qqq)
                 #assert(readA==instance['gt_char'][b])
@@ -783,8 +783,7 @@ class QRGenTrainer(BaseTrainer):
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                 elif self.i_cant:
-                    outim = ((gen_image[b]+1)*255/2).cpu().detach().permute(1,2,0).numpy().astype(np.uint8)
-                    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),outim)
+                    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),prepared_images[b])
                 #else:
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size
