@@ -17,7 +17,7 @@
 	    "image_class": "bedroom",
 	    "data_dir": "../data/LSUN",
 	    "shuffle": true,
-	    "batch_size": 24,
+	    "batch_size": 28,
 	    "num_workers": 3
     },
 
@@ -48,7 +48,7 @@
 	"generator": 1.0,
         "gen_reg": 1.0,
         "disc_reg": 1.0,
-        "char": 1.0,
+        "char": 0.5,
         "valid": 1.0
 
     },
@@ -114,7 +114,7 @@
         "new_gen_freq": 0.8,
         "forget_new_freq": 0.95,
         "balance_loss": "sign_preserve_var",
-        "balance_var_x": {"0":[1.0,1.2]},
+        "balance_var_x": {"0":[1.0]},
 
         "use_learning_schedule": false,
 
@@ -126,8 +126,8 @@
     "model": {
 	"arch": "QRWraper", 
         "style_dim": 512,
-        "generator": "SG2UGen small",
-        "discriminator": "StyleGAN2",
+        "generator": "SG2UGen small coordconv",
+        "discriminator": "StyleGAN2 smaller",
         "pretrained_qr": "saved/default_cconv_digits/checkpoint-latest.pth"
 
 
