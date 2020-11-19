@@ -80,6 +80,7 @@ class QRWraper(BaseModel):
                 channel_multiplier=2
             coord_conv = 'oord' in config['generator']
             use_tanh = 'unbound' not in config['generator']
+            predict_offset = 'predict_offset' in config['generator']
             self.generator = SG2UGen(256,style_dim,8,channel_multiplier=channel_multiplier,coord_conv=coord_conv,use_tanh=use_tanh)
         elif 'StyleGAN2' in config['generator']:
             self.generator = SG2Generator(256,style_dim,8,channel_multiplier=2)
