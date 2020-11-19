@@ -200,6 +200,10 @@ class QRGenTrainer(BaseTrainer):
         elif self.modulate_pixel_loss=='bang':
             self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
 
+        self.ramp_qr_losses = config['trainer']['ramp_qr_losses'] if 'ramp_qr_losses' in config['trainer'] else None
+        self.ramp_qr_losses_start=50000 if 'ramp_qr_losses_start' not in config['trainer'] else config['trainer']['ramp_qr_losses_start']
+        self.ramp_qr_losses_end = self.modulate_pixel_loss_start if 'modulate_pixel_loss_start' in config['trainer'] else config['trainer']['ramp_qr_losses_end']
+
         self.i_cant=False
 
         self.combine_qr_loss = False if 'combine_qr_loss' not in config['trainer'] else config['trainer']['combine_qr_loss']
@@ -436,6 +440,14 @@ class QRGenTrainer(BaseTrainer):
                         if type(multipliers) is not list:
                             multipliers=[multipliers]
                 multipliers = [self.lossWeights[x] if type(x) is str else x for x in multipliers]
+                if self.ramp_qr_losses:
+                    if iterations<self.ramp_qr_losses_start:
+                        ramp=0
+                    elif iteration<self.ramp_qr_losses_end:
+                        ramp = (iteration-self.ramp_qr_losses_start)/(self.ramp_qr_losses_end-self.ramp_qr_losses_start)
+                    else:
+                        ramp =1
+                    multipliers = [m*ramp for m in multipliers]
                 sum_multipliers+=sum(multipliers)
             for gi,saved_grad in enumerate(self.saved_grads):
                 if self.balance_loss.startswith('sign_preserve_var'):
