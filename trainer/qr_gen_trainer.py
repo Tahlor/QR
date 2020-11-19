@@ -689,13 +689,6 @@ class QRGenTrainer(BaseTrainer):
 
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
-            #if fake.size(3)>real.size(3):
-            #    diff = fake.size(3)-real.size(3)
-            #    real = F.pad(real,(0,diff,0,0),'replicate')
-            #elif fake.size(3)<real.size(3):
-            #    diff = -(fake.size(3)-real.size(3))
-            #    fake = F.pad(fake,(0,diff,0,0),'replicate')
-            #    #real = real[:,:,:,:-diff]
             if self.StyleGAN2:
                 fake_pred=self.model.discriminator(fake.detach())
                 real_pred=self.model.discriminator(real)
