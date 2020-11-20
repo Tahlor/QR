@@ -201,8 +201,9 @@ class QRGenTrainer(BaseTrainer):
             self.proper_accept=0.99 if 'proper_accept' not in config['trainer'] else config['trainer']['proper_accept']
 
         self.ramp_qr_losses = config['trainer']['ramp_qr_losses'] if 'ramp_qr_losses' in config['trainer'] else None
-        self.ramp_qr_losses_start=50000 if 'ramp_qr_losses_start' not in config['trainer'] else config['trainer']['ramp_qr_losses_start']
-        self.ramp_qr_losses_end = self.modulate_pixel_loss_start if 'modulate_pixel_loss_start' in config['trainer'] else config['trainer']['ramp_qr_losses_end']
+        if self.ramp_qr_losses:
+            self.ramp_qr_losses_start=50000 if 'ramp_qr_losses_start' not in config['trainer'] else config['trainer']['ramp_qr_losses_start']
+            self.ramp_qr_losses_end = self.modulate_pixel_loss_start if 'modulate_pixel_loss_start' in config['trainer'] else config['trainer']['ramp_qr_losses_end']
 
         self.i_cant=False
 
