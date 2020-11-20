@@ -1,0 +1,127 @@
+{
+    "name": "style_gan2_art",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+	    "data_set_name": "ImageAndQRDataset",
+	    "QR_dataset": {
+		"data_set_name": "SimpleQRDataset",
+		"final_size": 256
+	    },
+	    "image_dataset_name": "simple",
+	    "image_dataset_config": {"size": 256},
+	    "data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
+	    "shuffle": true,
+	    "batch_size": 32,
+	    "num_workers": 2
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0016,
+        "betas": [0,0.992]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00188,
+        "betas": [0,0.991]
+    },
+    "loss": {
+    },
+    "loss_weights": {
+	"discriminator": 1.0,
+	"generator": 1.0,
+        "gen_reg": 1.0,
+        "disc_reg": 1.0
+
+    },
+    "loss_params":
+        {
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "QRGenTrainer",
+        "iterations": 300000,
+        "save_dir": "saved/",
+        "val_step": 99990000,
+        "save_step": 10000,
+        "save_step_minor": 500,
+        "log_step": 500,
+        "verbosity": 1,
+        "monitor": "loss",
+
+	"freeze_param_names": ["qr_net"],
+        "slow_param_names": ["style_emb"],
+
+        "curriculum": {
+            "0": [     
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["disc_reg"]
+                    ]
+        },
+        "new_gen_freq": 0.8,
+        "forget_new_freq": 0.95,
+        "balance_loss": "sign_preserve_var",
+        "balance_var_x": {"0":[]},
+
+        "use_learning_schedule": false,
+
+        "print_dir": "train_out/style_gan2_art",
+        "serperate_print_every": 5000,
+        "print_every": 250
+    },
+    "model": {
+	"arch": "QRWraper", 
+        "style_dim": 512,
+        "generator": "StyleGAN2 small coordconv",
+        "discriminator": "StyleGAN2 smaller"
+
+
+    }
+}
