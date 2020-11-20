@@ -15,6 +15,7 @@ dependencies:
     - qrcode
     - opencv-python
     - requests
+    - lmdb
 
 prefix: /home/taylor/env/anaconda3/envs/qr
 # conda env update -f environment.yaml
