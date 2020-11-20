@@ -465,19 +465,6 @@ class BaseTrainer:
                 self.swa_model = checkpoint['swa_model']
         #if self.swa:
         #    self.swa_n = checkpoint['swa_n']
-        for keyI,vI in self.optimizer.state_dict()['state'].items():
-            assert(vI.size() == checkpoint['optimizer']['state'][keyI].size())
-            #if type(vI) is dict:
-            #    for key,v in vI.items():
-            #        assert(v.size() == checkpoint['optimizer'][keyI][key].size())
-            #else:
-            #    for v,v2 in zip(vI,checkpoint['optimizer'][keyI]):
-            #        if type(v) is dict:
-            #            for kx,vx in v.items():
-            #                if type(vx) is not float:
-            #                    assert(vx.size() == v2[kx].size())
-            #        else:
-            #            assert(v.size() == v2.size())
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         if self.with_cuda:
             for state in self.optimizer.state.values():
