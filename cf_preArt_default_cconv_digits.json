@@ -1,6 +1,6 @@
 {
     "name": "preArt_default_cconv_digits",
-    "cuda": true,
+    "cuda": false,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
