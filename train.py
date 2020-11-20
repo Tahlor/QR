@@ -134,7 +134,7 @@ if __name__ == '__main__':
                     assert False, "Path {} already used!".format(path)
     assert config is not None
     supercomputer = config['super_computer'] if 'super_computer' in config else False
-    supercomputer = supercomputer or args.ping
+    supercomputer = supercomputer or not args.ping
 
     name=config['name']
     file_name = args.config

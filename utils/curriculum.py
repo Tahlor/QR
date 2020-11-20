@@ -53,8 +53,8 @@ class Curriculum:
         self.eval = list(self.eval)
         self.eval.append('eval')
 
-        self.g_reg_every = round((len(lessons)-self.g_reg_every)/self.g_reg_every)
-        self.d_reg_every = round((len(lessons)-self.d_reg_every)/self.d_reg_every)
+        self.g_reg_every = round((len(lessons)-self.g_reg_every)/self.g_reg_every) if self.g_reg_every > 0 else 99999999
+        self.d_reg_every = round((len(lessons)-self.d_reg_every)/self.d_reg_every) if self.d_reg_every > 0 else 99999999
 
     def getLesson(self,iteration):
         while len(self.lessons)>0 and iteration>=self.lessons[-1][0]:
