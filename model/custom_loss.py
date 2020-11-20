@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from qr_decoder import zbar_decode
 from create_qr_code2 import plot_qr
 import numpy as np
-from data_utils import gaussian_noise
+from data_utils import gaussian_noise, change_contrast
 
 def loss(img, qr_code):
     # what threshold for recognition?
@@ -28,10 +28,15 @@ def colorize(img):
 def check_if_decodable(msg="this message"):
     img, qr = plot_qr(msg, plot=False)
     img = np.asarray(img)
-    x = 2
+    x = 250
     #img = 1-img
-    img = ((img.astype(np.float) / x) + .5 - 1/(2*x))*255
-    img = colorize(img)
+    img = (((img.astype(np.float) / x) + .5 - 1/(2*x))*255).astype(np.uint)
+
+    # COLORIZE
+    #img = colorize(img)
+
+    # CONTRAST
+    #img = change_contrast(img, 200)
 
     #img = gaussian_noise(img.astype(np.uint), .5)
     plt.imshow(img, cmap="gray", vmin=0, vmax=255); plt.show()

@@ -1,5 +1,5 @@
 from pyzbar.pyzbar import decode as pyzbar_decode
-
+from PIL import ImageEnhance, Image
 import os
 from pathlib import Path
 from scipy import ndimage
@@ -46,7 +46,7 @@ def create_alphabet(alphabet_description):
         return string.printable # 101
     elif alphabet_description == "digits":
         return string.digits  # 11
-    elif alphabet_description == "alhanumeric":
+    elif alphabet_description == "alphanumeric":
         return string.ascii_letters + string.digits # 63
 
 
@@ -59,6 +59,7 @@ def make_consistent(d1, d1_key, d2, d2_key):
         if not compare_lists(d1[d1_key], d2[d2_key]):
             warnings.warn(f"{d1_key} is {d1[d1_key]} whereas {d2_key} is {d2[d2_key]}; using {d1_key}")
             d2[d2_key] = d1[d1_key]
+
 
 def make_config_consistent(config):
     config = edict(config)
@@ -112,6 +113,7 @@ class Occlude(object):
             if int(xe + We) <= 32 and int(ye + He) <= 32:
                 tensor[:, int(ye):int(ye + He), int(xe):int(xe + We)].fill(np.random.uniform()*2-1)
                 return tensor
+
 
 def qr_decode(img):
     """ img: uint8, 0-255
@@ -200,8 +202,27 @@ def superimpose_images(img1, img2, img2_wt=None):
     added_image = cv2.addWeighted(img2, img2_wt, img1, 1-img2_wt, 0)
     return added_image
 
+def change_contrast(img, min_contrast=.25, max_contrast=1.3, contrast=None):
+    if isinstance(img, np.ndarray):
+        if img.ndim > 2:
+            assert img.shape[-1]==1
+            img = img[:, :, 0]
+        img = Image.fromarray(np.uint8(img), "L")
+    enhancer = ImageEnhance.Contrast(img)
+    if contrast is None:
+        contrast = np.random.rand()*(max_contrast-min_contrast)+min_contrast
+    #Image.fromarray(np.array(enhancer.enhance(contrast))).show()
+    return np.array(enhancer.enhance(contrast))
 
 def homography(image):
+    """ Not working!
+
+    Args:
+        image:
+
+    Returns:
+
+    """
     h = image.shape[0]
     w = image.shape[1]
 

@@ -12,6 +12,7 @@ dependencies:
   - tk
   - numpy
   - pytorch>=1.7.0
+  - cudatoolkit=10.2
   - scikit-learn
   - cython
   - matplotlib
