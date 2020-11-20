@@ -441,7 +441,7 @@ class QRGenTrainer(BaseTrainer):
                             multipliers=[multipliers]
                 multipliers = [self.lossWeights[x] if type(x) is str else x for x in multipliers]
                 if self.ramp_qr_losses:
-                    if iterations<self.ramp_qr_losses_start:
+                    if iteration<self.ramp_qr_losses_start:
                         ramp=0
                     elif iteration<self.ramp_qr_losses_end:
                         ramp = (iteration-self.ramp_qr_losses_start)/(self.ramp_qr_losses_end-self.ramp_qr_losses_start)
