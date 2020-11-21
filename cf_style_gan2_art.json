@@ -1,5 +1,5 @@
 {
-    "name": "style_gan2_art",
+    "name": "taylor_style_gan2_art",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
@@ -112,7 +112,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/style_gan2_art",
+        "print_dir": "train_out/taylor_style_gan2_art",
         "serperate_print_every": 5000,
         "print_every": 250
     },
@@ -121,7 +121,6 @@
         "style_dim": 512,
         "generator": "StyleGAN2 small coordconv",
         "discriminator": "StyleGAN2 smaller"
-
 
     }
 }
