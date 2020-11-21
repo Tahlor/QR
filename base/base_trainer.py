@@ -62,12 +62,12 @@ class BaseTrainer:
             main_params=[]
             discriminator_params=[]
             gen_only_params=[]
-            gen_only_slow_params=[]
+            gen_only_params_slow=[]
             style_ex_only_params=[]
             style_ex_only_slow_params=[]
             slow_params=[]
-            slow_param_names = config['trainer']['slow_param_names'] if 'slow_param_names' in config else []
-            freeze_param_names = config['trainer']['freeze_param_names'] if 'freeze_param_names' in config else []
+            slow_param_names = config['trainer']['slow_param_names'] if 'slow_param_names' in config['trainer'] else []
+            freeze_param_names = config['trainer']['freeze_param_names'] if 'freeze_param_names' in config['trainer'] else []
             only_params = config['trainer']['only_params'] if 'only_params' in config['trainer'] else None
             fix_author_classifer = config['model']['fix_author_classifer'] if 'fix_author_classifer' in config['model'] else (config['trainer']['fix_author_classifer'] if 'fix_author_classifer' in config['trainer'] else False)
             for name,param in model.named_parameters():
@@ -99,6 +99,7 @@ class BaseTrainer:
                     elif 'style_extractor' in name and self.curriculum.need_style_in_disc:
                         discriminator_params.append(param)
                     else:
+                        assert('qr_net' not in name)
                         main_params.append(param)
                         if 'generator' in name:
                             gen_only_params.append(param)
@@ -452,6 +453,8 @@ class BaseTrainer:
             for mkey in my_keys:
                 if mkey not in keys:
                     checkpoint['state_dict'][mkey]=my_state[mkey]
+                #else:
+                #    print('{} me: {}, load: {}'.format(mkey,my_state[mkey].size(),checkpoint['state_dict'][mkey].size()))
 
             self.model.load_state_dict(checkpoint['state_dict'])
             if self.swa:

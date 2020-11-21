@@ -39,16 +39,14 @@
         "betas": [0,0.991]
     },
     "loss": {
-        "char": "cross_entropy",
-        "valid": "sigmoid_BCE_loss"
+        "pixel":"QRCenterPixelLoss"
     },
     "loss_weights": {
 	"discriminator": 1.0,
 	"generator": 1.0,
         "gen_reg": 1.0,
         "disc_reg": 1.0,
-        "char": 0.5,
-        "valid": 1.0
+        "pixel": 1.0
 
     },
     "loss_params":
@@ -73,7 +71,6 @@
         "monitor": "loss",
 
 	"freeze_param_names": ["qr_net"],
-        "slow_param_names": ["style_emb"],
 
         "curriculum": {
             "0": [     

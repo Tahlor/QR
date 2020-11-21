@@ -74,7 +74,6 @@
         "monitor": "loss",
 
 	"freeze_param_names": ["qr_net"],
-        "slow_param_names": ["style_emb"],
 
         "curriculum": {
             "0": [     
