@@ -344,6 +344,40 @@ def test_dataset():
     dataset[0]
     #test_distortions(dataset, image=dataset[0]["image_undistorted"].squeeze())
 
+class AdvancedQRDataset2(AdvancedQRDataset):
+    def __init__(self, dirPath,split,config, full_config, *args, **kwargs):
+        super().__init__(dirPath,split,config, full_config, *args, **kwargs)
+
+    def generate_qr_code(self, gt_char):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            #box_size=6,
+            #border=1,
+            #mask_pattern=1,
+            box_size=1,
+            border=2
+        )
+        gt_char = str(gt_char)
+        qr.add_data(gt_char)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black",
+                            back_color="white").resize(self.qr_size)
+        #print(np.array(img).shape)
+        img = np.array(img).astype(np.uint8) * 255
+
+        targetchar = torch.LongTensor(17).fill_(0)
+        for i,c in enumerate(gt_char):
+            targetchar[i]=self.char_to_index[c]
+        targetvalid = torch.FloatTensor([1])
+        return {
+            "gt_char": gt_char,
+            'targetchar': targetchar,
+            'targetvalid': targetvalid,
+            "image_undistorted": img
+        }
+
+
 def test():
     test_distortions()
 

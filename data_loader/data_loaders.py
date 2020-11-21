@@ -36,6 +36,9 @@ def getDataLoader(config,split):
         elif data_set_name=="AdvancedQRDataset":
             return withCollate(advanced_qr_dataset.AdvancedQRDataset, advanced_qr_dataset.collate, batch_size,
                                valid_batch_size, shuffle, shuffleValid, numDataWorkers, split, data_dir, config)
+        elif data_set_name=="AdvancedQRDataset2":
+            return withCollate(advanced_qr_dataset.AdvancedQRDataset2, advanced_qr_dataset.collate, batch_size,
+                               valid_batch_size, shuffle, shuffleValid, numDataWorkers, split, data_dir, config)
         else:
             print('Error, no dataloader has no set for {}'.format(data_set_name))
             exit()

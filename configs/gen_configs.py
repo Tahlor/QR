@@ -5,6 +5,7 @@ from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict as edict
 import gen_scripts
+from time import sleep
 
 out = Path("./auto/")
 out.mkdir(parents=True, exist_ok=True)
@@ -40,6 +41,6 @@ for coord_conv in True,False:
             name = f"{architecture}{'_cconv' if coord_conv else '_'}_{'alphanumeric' if 'a' in alphabet else 'digits'}.json"
             config.name = Path(name).stem
             json.dump(config.__dict__,(out / f"___{name}").open("w"), indent=4, separators=(',', ':'))
-            os.chmod(out / f"___{name}", 755)
+            #os.chmod(out / f"___{name}", 755)
 
 gen_scripts.run_it()
