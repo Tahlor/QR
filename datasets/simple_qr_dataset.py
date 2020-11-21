@@ -26,6 +26,10 @@ def collate(batch):
 class SimpleQRDataset(Dataset):
     def __init__(self, dirPath,split,config):
 
+        self.box_size = config["box_size"] if "box_size" in config else 1 # 6 in initial training
+        self.border = config["border"] if "border" in config else 2 # 1 in initial training
+        self.mask_pattern = config["mask_pattern"] if "mask_pattern" in config else None # 1 in initial training
+        print(f"QR gen opts: {self.box_size} {self.border} {self.mask_pattern}")
 
         self.final_size = config['final_size'] if 'final_size' in config else None
         
@@ -65,8 +69,9 @@ class SimpleQRDataset(Dataset):
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=1,
-            border=2,
+            box_size=self.box_size,
+            border=self.border,
+            mask_pattern=self.mask_pattern,
         )
         if self.str_len is not None:
             length = random.randrange(4,self.str_len+1)
@@ -97,3 +102,4 @@ class SimpleQRDataset(Dataset):
             'targetchar': targetchar,
             'targetvalid': targetvalid
         }
+
