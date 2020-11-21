@@ -9,8 +9,11 @@
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
 		"data_set_name": "SimpleQRDataset",
-		"final_size": 256
-	    },
+		"final_size": 256,
+          "box_size": 6,
+          "border": 1,
+          "mask_pattern": 1
+        },
 	    "image_dataset_name": "simple",
 	    "image_dataset_config": {"size": 256},
 	    "data_dir": "../data/abstract_art",
@@ -112,7 +115,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/style_gan2_art",
+        "print_dir": "train_out/taylor_style_gan2_art",
         "serperate_print_every": 5000,
         "print_every": 250
     },
@@ -121,7 +124,6 @@
         "style_dim": 512,
         "generator": "StyleGAN2 small coordconv",
         "discriminator": "StyleGAN2 smaller"
-
 
     }
 }
