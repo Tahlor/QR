@@ -1,3 +1,4 @@
+import os
 import json
 from pathlib import Path
 from easydict import EasyDict as edict
@@ -40,7 +41,9 @@ which python
 python -u train.py --config "./configs/{config_path.as_posix()}" {resume}
 
 """
-    Path(f"./auto/scripts/{config_name}.sh").open("w").write(script)
+    out_path = Path(f"./auto/scripts/{config_name}.sh")
+    out_path.open("w").write(script)
+    os.chmod(out_path, 0o755)
 
 def check_config(path):
     correct_name = path.stem.replace("___", "")
