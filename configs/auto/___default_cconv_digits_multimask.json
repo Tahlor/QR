@@ -7,7 +7,7 @@
     "override":true,
     "super_computer":true,
     "data_loader":{
-        "data_set_name":"AdvancedQRDataset2",
+        "data_set_name":"AdvancedQRDataset",
         "batch_size":32,
         "shuffle":true,
         "num_workers":5,
@@ -17,6 +17,9 @@
             224,
             224
         ],
+        "box_size": 1,
+        "border": 2,
+        "mask_pattern": null,
         "distortions":true,
         "distortion_prob":0.3,
         "data_dir":"none",
