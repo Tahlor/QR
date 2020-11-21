@@ -34,5 +34,4 @@ conda activate "/zgrouphome/fslg_qr/env/qr"
 
 cd "/lustre/scratch/grp/fslg_qr/qr2"
 
-
-python  train.py -c ./configs/taylor/cf_style_gan2_art.json -s saved/sg2u_default_cconv_digits/checkpoint-latest.pth
+python  train.py -c ./configs/taylor/cf_taylor_style_gan2_art.json -s saved/sg2u_default_cconv_digits/checkpoint-latest.pth

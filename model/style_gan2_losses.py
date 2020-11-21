@@ -39,4 +39,3 @@ def g_path_regularize(fake_img, latents, mean_path_length, decay=0.01):
     path_penalty = (path_lengths - path_mean).pow(2).mean()
 
     return path_penalty, path_mean.detach(), path_lengths
-
