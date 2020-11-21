@@ -1,5 +1,5 @@
 {
-    "name": "style_gan2_art",
+    "name": "taylor_style_gan2_art",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
@@ -13,7 +13,7 @@
 	    },
 	    "image_dataset_name": "simple",
 	    "image_dataset_config": {"size": 256},
-	    "data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
+	    "data_dir": "../data/abstract_art",
 	    "shuffle": true,
 	    "batch_size": 32,
 	    "num_workers": 2
