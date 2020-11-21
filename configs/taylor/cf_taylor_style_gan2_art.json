@@ -1,5 +1,5 @@
 {
-    "name": "style_gan2_art",
+    "name": "taylor_style_gan2_art",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
