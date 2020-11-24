@@ -642,6 +642,7 @@ class SG2Discriminator(nn.Module):
             256: 16 * channel_multiplier,
         }
 
+        # 3 -> 32 channels
         convs = [ConvLayer(3, channels[size], 1)]
 
         log_size = int(math.log(size, 2))
@@ -667,9 +668,9 @@ class SG2Discriminator(nn.Module):
         )
 
     def forward(self, input,_=False):
-        out = self.convs(input)
+        out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
-        batch, channel, height, width = out.shape
+        batch, channel, height, width = out.shape # Batch, 512, 4, 4
         group = min(batch, self.stddev_group)
         group = batch//(batch//group)
         stddev = out.view(
@@ -678,14 +679,72 @@ class SG2Discriminator(nn.Module):
         stddev = torch.sqrt(stddev.var(0, unbiased=False) + 1e-8)
         stddev = stddev.mean([2, 3, 4], keepdims=True).squeeze(2)
         stddev = stddev.repeat(group, 1, height, width)
-        out = torch.cat([out, stddev], 1)
+        out = torch.cat([out, stddev], 1) # -> B,513,4,4
 
         out = self.final_conv(out)
 
-        out = out.view(batch, -1)
+        out = out.view(batch, -1) # B, 8192
         out = self.final_linear(out)
 
         return out
+
+class SG2DiscriminatorPatch(nn.Module):
+
+    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False):
+        super().__init__()
+        smaller = True
+        channels = {
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
+            16: 256 * channel_multiplier,
+            32: 128 * channel_multiplier,
+            64: 64 * channel_multiplier,
+            128: 32 * channel_multiplier,
+            256: 16 * channel_multiplier,
+        }
+
+        # 3 -> 32 channels
+        convs = [ConvLayer(3, channels[size], 1)]
+
+        log_size = int(math.log(size, 2))
+
+        in_channel = channels[size]
+
+        for i in range(log_size // 2, 2, -1):
+            out_channel = channels[2 ** (i - 1)]
+
+            convs.append(ResBlock(in_channel, out_channel, blur_kernel))
+
+            in_channel = out_channel
+
+        self.convs = nn.Sequential(*convs)
+
+        self.stddev_group = 4
+        self.stddev_feat = 1
+
+        self.final_conv = ConvLayer(in_channel + 1, 1, 3)
+
+    def forward(self, input,_=False):
+        out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
+
+        batch, channel, height, width = out.shape # batch, 256, 64, 64
+        group = min(batch, self.stddev_group)
+        group = batch//(batch//group)
+        stddev = out.view(
+            group, -1, self.stddev_feat, channel // self.stddev_feat, height, width
+        )
+        stddev = torch.sqrt(stddev.var(0, unbiased=False) + 1e-8)
+        stddev = stddev.mean([2, 3, 4], keepdims=True).squeeze(2)
+        stddev = stddev.repeat(group, 1, height, width)
+        out = torch.cat([out, stddev], 1) # -> B,513,4,4
+
+        out = self.final_conv(out) # batch, 1, 64, 64
+
+        out = out.view(batch, -1)
+        return out # B, 8192
+
 
 import torch
 import torch.nn as nn
@@ -700,7 +759,7 @@ class ConvBlock(nn.Sequential):
         self.add_module('LeakyRelu',nn.LeakyReLU(0.2, inplace=True))
 
 class WDiscriminator(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, opt): # size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False
         super(WDiscriminator, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = int(opt.nfc)

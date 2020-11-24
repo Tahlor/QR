@@ -13,7 +13,7 @@ from .decoder_cnn import DecoderCNN
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt
 from .style_gan import GrowGen, GrowDisc
-from .style_gan2 import SG2Generator, SG2Discriminator
+from .style_gan2 import SG2Generator, SG2Discriminator, SG2DiscriminatorPatch
 from .grow_gen_u import GrowGenU
 from .style_gan2_u_gen import SG2UGen
 
@@ -112,7 +112,10 @@ class QRWraper(BaseModel):
                 else:
                     channel_multiplier=2
                 smaller='smaller' in config['discriminator']
-                self.discriminator=SG2Discriminator(256,channel_multiplier=channel_multiplier,smaller=smaller)
+                if "patch" in config['discriminator'].lower():
+                    self.discriminator = SG2DiscriminatorPatch(256, channel_multiplier=channel_multiplier, smaller=smaller)
+                else:
+                    self.discriminator=SG2Discriminator(256,channel_multiplier=channel_multiplier,smaller=smaller)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 
