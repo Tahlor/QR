@@ -170,6 +170,30 @@ def rotate(img,num_rot,degress=None):
 def getAffineTransform(src,dst):
     return transform.estimate_transform('affine',src,dst).params
 
+def superimposeImages(img1, img2, img2_wt=None):
+    """
+
+    Args:
+        img1 (nd-array): QR code
+        img2 (nd-array): background image
+        img2_wt:
+
+    Returns:
+
+    """
+    if img1.ndim == 2:
+        img1 = img1[:,:,np.newaxis]
+    if img2_wt is None:
+        img2_wt = np.clip(np.random.randn()/3+.2,0,.9)
+    if isinstance(img2, str):
+        img2 = np.array(cv2.imread(img2)).astype(np.uint8)*255
+    #print(img1.shape, img1.dtype, img2.shape, img2.dtype)
+    y,x,c = img1.shape
+    #cropped = img2[:x,:y,:]
+    img2 = resize(img2, (x,y))[:,:,np.newaxis]
+    added_image = img2*img2_wt + img1*(1-img2_wt) #cv2.addWeighted(img2, img2_wt, img1, 1-img2_wt, 0)
+    return added_image
+
 if __name__ == "__main__":
     import sys
     input_image = sys.argv[1]
