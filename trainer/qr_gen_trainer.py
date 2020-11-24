@@ -222,6 +222,18 @@ class QRGenTrainer(BaseTrainer):
             targetvalid = data['targetvalid']
             targetchar = data['targetchar']
         return qr_image, targetvalid,targetchar
+    def _to_tensor_decode(self, data):
+        if self.with_cuda:
+            #image = data['image'].to(self.gpu)
+            image = data['image'].to(self.gpu)
+            targetvalid = data['targetvalid'].to(self.gpu)
+            targetchar = data['targetchar'].to(self.gpu)
+        else:
+            #image = data['image']
+            image = data['image']
+            targetvalid = data['targetvalid']
+            targetchar = data['targetchar']
+        return image, targetvalid,targetchar
 
 
     #I don't use this for metrics, I find it easier to just compute them in run()
@@ -641,7 +653,35 @@ class QRGenTrainer(BaseTrainer):
         #        label_onehot[i,j,label[i,j]]=1
         return label_onehot.to(label.device)
 
+    def run_decoder():
+        losses={}
+        try:
+            try:
+                instance = self.sample_data_loader_iter.next()
+            except StopIteration:
+                self.sample_data_loader_iter = iter(self.sample_data_loader)
+                instance = self.sample_data_loader_iter.next()
+        images,targetvalid,targetchars = _to_tensor_decode(instace)
+        char_gt = instance['gt_char']
 
+        valid_pred,char_pred = self.model.qr_net(images)
+        losses['charLoss'] = self.loss['char'](char_pred.reshape(batch_size*char_pred.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+        #assert(losses['charLoss']!=0)
+        #if losses['charLoss']<0.0001:
+        #   del losses['charLoss']
+        losses['validLoss'] = self.loss['valid'](valid_pred,targetvalid,*self.loss_params['valid'])
+        #    if losses['validLoss']<0.0001:
+        #        del losses['validLoss']
+
+        correctly_decoded=0
+        prepared_images = ((images+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
+        for b in range(batch_size):
+            read = util.zbar_decode(prepared_images[b])
+            if read==char_gt[b]:
+                correctly_decoded+=1
+            proper_ratio = correctly_decoded/batch_size
+        log={'decoder_accuracy':proper_ratio}
+        return losses,log
 
     def run(self,instance,lesson,get=[]):
         qr_image, targetvalid,targetchars = self._to_tensor(instance)
@@ -677,6 +717,8 @@ class QRGenTrainer(BaseTrainer):
                     del losses['validLoss']
             #gen_qrLoss = self.loss['QR'](gen_pred,label)
             #losses['QRLoss'] = gen_qrLoss
+
+
 
 
 
@@ -901,81 +943,6 @@ class QRGenTrainer(BaseTrainer):
             return cer,wer, pred_strs, all_cer
         return cer,wer, pred_strs
 
-    def sample_gen(self,batch_size):
-        images=[]
-        labels=[]
-
-        #max_w=0
-        #max_l=0
-        for b in range(batch_size):
-            if (random.random()<self.new_gen_freq or len(self.old_gen)<10) and len(self.new_gen)>0:
-                #new
-                inst = self.new_gen[0]
-                self.new_gen = self.new_gen[1:]
-            elif  len(self.old_gen)>0:
-                i = random.randint(0,len(self.old_gen)-1)
-                if self.old_gen_cache is not None:
-                    inst = torch.load(self.old_gen[i])
-                else:
-                    inst = self.old_gen[i]
-            else:
-                return None
-
-            if type(inst) is tuple:
-                image,label = inst
-                labels.append(label)
-                #max_l = max(max_l,label.size(0))
-            else:
-                image = inst
-                label=None
-            images.append(image)
-            #max_w = max(max_w,image.size(3))
-            #if label is not None:
-        #for b in range(batch_size):
-        #    if images[b].size(3)<max_w:
-        #        diff = max_w -  images[b].size(3)
-        #        images[b] = F.pad( images[b], (0,diff),value=PADDING_CONSTANT)
-        #    if labels[b].size(0)<max_l:
-        #        diff = max_l -  labels[b].size(0)
-        #        labels[b] = F.pad( labels[b].permute(1,2,0), (0,diff),value=PADDING_CONSTANT).permute(2,0,1)
-        
-        assert(len(images)==batch_size)
-        if len(labels)>0:
-            return torch.cat(images,dim=0), torch.cat(labels,dim=0)
-        else:
-            return torch.cat(images,dim=0)
-
-    def add_gen_sample(self,images,labels=None):
-        batch_size = images.size(0)
-        images = images.cpu().detach()
-        if labels is not None:
-            labels = labels.cpu().detach()
-
-        for b in range(batch_size):
-            if labels is not None:
-                inst = (images[b:b+1],labels[:,b:b+1],styles[b:b+1])
-            else:
-                inst = images[b:b+1]
-            if len(self.new_gen)>= self.store_new_gen_limit:
-                old = self.new_gen[0]
-                self.new_gen = self.new_gen[1:]+[inst]
-
-                if len(self.old_gen)>= self.store_old_gen_limit:
-                    if random.random() > self.forget_new_freq:
-                        change = random.randint(0,len(self.old_gen)-1)
-                        if self.old_gen_cache is not None:
-                            torch.save(old,self.old_gen[change])
-                        else:
-                            self.old_gen[change] = old
-                else:
-                    if self.old_gen_cache is not None:
-                        path = os.path.join(self.old_gen_cache,'{}.pt'.format(len(self.old_gen)))
-                        torch.save(old,path)
-                        self.old_gen.append(path)
-                    else:
-                        self.old_gen.append(old)
-            else:
-                self.new_gen.append(inst)
 
 
     def print_images(self,images,text,disc=None,typ='gen',gtImages=None):

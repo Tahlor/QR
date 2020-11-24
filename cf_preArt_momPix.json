@@ -116,7 +116,7 @@
         "new_gen_freq": 0.8,
         "forget_new_freq": 0.95,
         "balance_loss": "sign_preserve_var",
-        "balance_var_x": {"0":[1.2]},
+        "balance_var_x": {"0":["pixel"]},
 
         "use_learning_schedule": false,
 
@@ -129,7 +129,7 @@
         "modulate_pixel_loss": "momentum",
         "modulate_pixel_loss_start": 100000,
         "min_pixel_weight": 0.4,
-        "max_pixel_weight": 1.2,
+        "max_pixel_weight": 1.8,
         "pixel_momentum_B": 0.8
     },
     "model": {
