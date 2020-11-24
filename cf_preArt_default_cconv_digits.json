@@ -1,6 +1,6 @@
 {
     "name": "preArt_default_cconv_digits",
-    "cuda": false,
+    "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
@@ -15,7 +15,8 @@
 	    },
 	    "image_dataset_name": "simple",
 	    "image_dataset_config": {"size": 256},
-	    "data_dir": "../data/abstract_art",
+	    "#data_dir": "../data/abstract_art",
+	    "data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
 	    "shuffle": true,
 	    "batch_size": 40,
 	    "num_workers": 2
@@ -119,7 +120,8 @@
         "new_gen_freq": 0.8,
         "forget_new_freq": 0.95,
         "balance_loss": "sign_preserve_var",
-        "balance_var_x": {"0":[1.2]},
+        "balance_var_x": {"0":[2]},
+        "combine_qr_loss": true,
 
         "use_learning_schedule": false,
 

@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch import autograd
 from base import BaseTrainer
 import timeit
-from utils import util, string_utils, error_rates
+from utils import util, string_utils, error_rates, img_f
 from utils.metainit import metainitRecog
 from data_loader import getDataLoader
 from collections import defaultdict
@@ -13,7 +13,7 @@ import random, json, os
 from model.clear_grad import ClearGrad
 #from model.autoencoder import Encoder, EncoderSm, Encoder2, Encoder3, Encoder32
 import torchvision.utils as vutils
-import utils.img_f as img_f
+from datasets import gen_sample_dataset
 
 from model.style_gan2_losses import d_logistic_loss, d_r1_loss, g_nonsaturating_loss, g_path_regularize
 
@@ -59,6 +59,11 @@ class QRGenTrainer(BaseTrainer):
             self.valid_data_loader = valid_data_loader
         self.valid = True if self.valid_data_loader is not None else False
 
+        if self.curriculum.train_decoder:
+            sample_dataset_config  = config['sample_data_loader']
+            sample_dataset = gen_sample_dataset.GenSampleDataset(sample_dataset_config,sample_dataset_config['seed_dataset_config'])
+            self.sample_data_loader = torch.utils.data.DataLoader(sample_dataset, batch_size=sample_dataset_config['batch_size'], shuffle=False, num_workers=sample_dataset_config['num_workers'], collate_fn=gen_sample_dataset.collate)
+            self.sample_data_loader_iter = iter(self.sample_data_loader)
 
 
         self.feature_loss = 'feature' in self.loss
@@ -68,25 +73,9 @@ class QRGenTrainer(BaseTrainer):
         self.to_display={}
 
 
-
         self.gan_loss = 'discriminator' in config['model']
         self.disc_iters = config['trainer']['disc_iters'] if 'disc_iters' in config['trainer'] else 1
 
-        #This text data could be used to randomly sample strings, if we so choose
-        text_data_batch_size = config['trainer']['text_data_batch_size'] if 'text_data_batch_size' in config['trainer'] else self.config['data_loader']['batch_size']
-        text_words = config['trainer']['text_words'] if 'text_words' in config['trainer'] else False
-        if 'a_batch_size' in self.config['data_loader']:
-            self.a_batch_size = self.config['data_loader']['a_batch_size']
-            text_data_batch_size*=self.config['data_loader']['a_batch_size']
-        else:
-            self.a_batch_size=1
-        #text_data_max_len = config['trainer']['text_data_max_len'] if 'text_data_max_len' in config['trainer'] else 20
-        if data_loader is not None:
-            if 'text_data' in config['trainer']:
-                text_data_max_len = self.data_loader.dataset.max_len()
-                characterBalance = config['trainer']['character_balance'] if 'character_balance' in config['trainer'] else False
-                text_data_max_len = config['trainer']['text_data_max_len'] if 'text_data_max_len' in config['trainer'] else text_data_max_len
-                self.text_data = TextData(config['trainer']['text_data'],config['data_loader']['char_file'],text_data_batch_size,max_len=text_data_max_len,words=text_words,characterBalance=characterBalance) if 'text_data' in config['trainer'] else None
 
         self.balance_loss = config['trainer']['balance_loss'] if 'balance_loss' in config['trainer'] else False # balance the CTC loss with others as in https://arxiv.org/pdf/1903.00277.pdf, although many of may variations (which are better)
         if self.balance_loss:
@@ -109,25 +98,6 @@ class QRGenTrainer(BaseTrainer):
 
         self.no_bg_loss= config['trainer']['no_bg_loss'] if 'no_bg_loss' in config else False
         
-        self.sample_disc = self.curriculum.sample_disc if self.curriculum is not None else False
-        #if we are going to sample images from the past for the discriminator, these are to store previous generations
-        if self.sample_disc:
-            self.new_gen=[]
-            self.old_gen=[]
-            self.store_new_gen_limit = 10
-            self.store_old_gen_limit = config['trainer']['store_old_gen_limit'] if 'store_old_gen_limit' in config['trainer'] else 200
-            self.new_gen_freq = config['trainer']['new_gen_freq'] if 'new_gen_freq' in config['trainer'] else 0.7
-            self.forget_new_freq = config['trainer']['forget_new_freq'] if 'forget_new_freq'  in config['trainer'] else 0.0
-            self.old_gen_cache = config['trainer']['old_gen_cache'] if 'old_gen_cache' in config['trainer'] else os.path.join(self.checkpoint_dir,'old_gen_cache')
-            if self.old_gen_cache is not None:
-                util.ensure_dir(self.old_gen_cache)
-                #check for files in cache, so we can resume with them
-                for i in range(self.store_old_gen_limit):
-                    path = os.path.join(self.old_gen_cache,'{}.pt'.format(i))
-                    if os.path.exists(path):
-                        self.old_gen.append(path)
-                    else:
-                        break
 
 
         self.WGAN = config['trainer']['WGAN'] if 'WGAN' in config['trainer'] else False
@@ -275,23 +245,26 @@ class QRGenTrainer(BaseTrainer):
 
         #t#tic=timeit.default_timer()#t#
         lesson =  self.curriculum.getLesson(iteration)
-        if 'alt-data' in lesson:
-            try:
-                instance = self.alt_data_loader_iter.next()
-            except StopIteration:
-                if 'refresh_data' in dir(self.alt_data_loader.dataset):
-                    self.alt_data_loader.dataset.refresh_data(None,None,self.logged)
-                self.alt_data_loader_iter = iter(self.alt_data_loader)
-                instance = self.alt_data_loader_iter.next()
-        elif self.curriculum and 'triplet-style' in lesson:
-            try:
-                instance = self.triplet_data_loader_iter.next()
-            except StopIteration:
-                if 'refresh_data' in dir(self.triplet_data_loader.dataset):
-                    self.triplet_data_loader.dataset.refresh_data(None,None,self.logged)
-                self.triplet_data_loader_iter = iter(self.triplet_data_loader)
-                instance = self.triplet_data_loader_iter.next()
+        if 'decoder' in lesson:
+            self.optimizer_decoder.zero_grad()
+            losses,run_log = self.run_decoder() #this function access the sample dataset loads
+            new_losses={}
+            loss=0
+            for name in losses.keys():
+                losses[name] *= self.lossWeights[name[:-4]]
+                loss += losses[name]
+                new_losses['decoder_'+name] = losses[name].item()
+            torch.nn.utils.clip_grad_value_(self.model.qr_net.parameters(),2) #prevent huge gradients
+            self.optimizer_decoder.step()
+            losses=new_losses
+            if type(loss) is not int:
+                loss_item = loss.item()
+            else:
+                loss_item = loss
         else:
+            self.optimizer.zero_grad()
+            if any(['disc' in l or 'author-train' in l for l in lesson]):
+                self.optimizer_discriminator.zero_grad()
             try:
                 instance = self.data_loader_iter.next()
             except StopIteration:
@@ -299,240 +272,208 @@ class QRGenTrainer(BaseTrainer):
                     self.data_loader.dataset.refresh_data(None,None,self.logged)
                 self.data_loader_iter = iter(self.data_loader)
                 instance = self.data_loader_iter.next()
-        ##toc=timeit.default_timer()
-        ##print('data: '+str(toc-tic))
 
-        ##tic=timeit.default_timer()
 
-        self.optimizer.zero_grad()
-        if any(['disc' in l or 'author-train' in l for l in lesson]):
-            self.optimizer_discriminator.zero_grad()
-
-        ##toc=timeit.default_timer()
-        ##print('for: '+str(toc-tic))
-
-        ##tic=timeit.default_timer()
-        #if all([l==0 for l in instance['label_lengths']]):
-        #        return {}
-
-        #if (self.iter_to_print<=0 or self.print_next_gen) and 'gen' in lesson:
-        #    losses,got = self.run(instance,lesson,get=['gen','disc'])
-        #    self.print_images(got['gen'],instance['gt'],got['disc'],typ='gen')
-        #    if self.iter_to_print>0:
-        #        self.print_next_gen=False
-        #    else:
-        #        self.print_next_auto=True
-        #        self.iter_to_print=self.print_every
-        #elif (self.iter_to_print<=0 or self.print_next_auto) and 'auto' in lesson:
-        #    losses,got = self.run(instance,lesson,get=['recon','recon_gt_mask'])
-        #    self.print_images(got['recon'],instance['gt'],typ='recon',gtImages=instance['image'])
-        #    self.print_images(got['recon_gt_mask'],instance['gt'],typ='recon_gt_mask')
-        #    if self.iter_to_print>0:
-        #        self.print_next_auto=False
-        #    else:
-        #        self.print_next_gen=True
-        #        self.iter_to_print=self.print_every
-
-        if self.iter_to_print<=0:
-            losses,run_log,got = self.run(instance,lesson,get=['gen'])
-            self.print_images(got['gen'],instance['gt_char'],gtImages=instance['qr_image'],typ='gen')
-            self.iter_to_print=self.print_every
-        else:
-            losses,run_log = self.run(instance,lesson)
-            self.iter_to_print-=1
-        pred=None
-
-        if losses is None:
-            return {}
-        #TODO rewrite these for the losses we need to balance (probably just QR reading and validation)
-        loss=0
-        charLoss=0
-        validLoss=0
-        pixelLoss=0
-        #authorClassLoss=0
-        #autoGenLoss=0
-        for name in losses.keys():
-            losses[name] *= self.lossWeights[name[:-4]]
-            #if self.balance_loss and 'generator' in name and 'auto-gen' in lesson:
-            #    autoGenLoss += losses[name]
-            #elif self.balance_loss and 'Recog' in name:
-            #    charLoss += losses[name]
-            #elif self.balance_loss and 'authorClass' in name:
-            #    authorClassLoss += losses[name]
-            if self.balance_loss and 'char' in name:
-                charLoss += losses[name]
-            elif self.balance_loss and 'valid' in name:
-                validLoss += losses[name]
-            elif self.balance_loss and 'pixel' in name:
-                pixelLoss += losses[name]
+            if self.iter_to_print<=0:
+                losses,run_log,got = self.run(instance,lesson,get=['gen'])
+                self.print_images(got['gen'],instance['gt_char'],gtImages=instance['qr_image'],typ='gen')
+                self.iter_to_print=self.print_every
             else:
-                loss += losses[name]
-            losses[name] = losses[name].item()
-        if self.combine_qr_loss:
-            losses_to_balance = [charLoss+validLoss,pixelLoss] #magic order for balance_var_x param
-        else:
-            losses_to_balance = [charLoss,validLoss,pixelLoss] #magic order for balance_var_x param
-        if (loss!=0 and (torch.isnan(loss) or torch.isinf(loss))):
-            print(losses)
-        assert(loss==0 or (not torch.isnan(loss) and not torch.isinf(loss)))
-        #if pred is not None:
-        #    pred = pred.detach().cpu().numpy()
-        if type(loss) is not int:
-            loss_item = loss.item()
-        else:
-            loss_item = loss
+                losses,run_log = self.run(instance,lesson)
+                self.iter_to_print-=1
+            pred=None
 
-        if self.balance_loss:
-            for b_loss in losses_to_balance:
-                if type(b_loss) is not int:
-                    saved_grad=[]
-                    loss_item += b_loss.item()
-                    
-                    b_loss.backward(retain_graph=True)
+            if losses is None:
+                return {}
+            #TODO rewrite these for the losses we need to balance (probably just QR reading and validation)
+            loss=0
+            charLoss=0
+            validLoss=0
+            pixelLoss=0
+            #authorClassLoss=0
+            #autoGenLoss=0
+            for name in losses.keys():
+                losses[name] *= self.lossWeights[name[:-4]]
+                #if self.balance_loss and 'generator' in name and 'auto-gen' in lesson:
+                #    autoGenLoss += losses[name]
+                #elif self.balance_loss and 'Recog' in name:
+                #    charLoss += losses[name]
+                #elif self.balance_loss and 'authorClass' in name:
+                #    authorClassLoss += losses[name]
+                if self.balance_loss and 'char' in name:
+                    charLoss += losses[name]
+                elif self.balance_loss and 'valid' in name:
+                    validLoss += losses[name]
+                elif self.balance_loss and 'pixel' in name:
+                    pixelLoss += losses[name]
+                else:
+                    loss += losses[name]
+                losses[name] = losses[name].item()
+            if self.combine_qr_loss:
+                losses_to_balance = [charLoss+validLoss,pixelLoss] #magic order for balance_var_x param
+            else:
+                losses_to_balance = [charLoss,validLoss,pixelLoss] #magic order for balance_var_x param
+            if (loss!=0 and (torch.isnan(loss) or torch.isinf(loss))):
+                print(losses)
+            assert(loss==0 or (not torch.isnan(loss) and not torch.isinf(loss)))
+            #if pred is not None:
+            #    pred = pred.detach().cpu().numpy()
+            if type(loss) is not int:
+                loss_item = loss.item()
+            else:
+                loss_item = loss
 
+            if self.balance_loss:
+                for b_loss in losses_to_balance:
+                    if type(b_loss) is not int:
+                        saved_grad=[]
+                        loss_item += b_loss.item()
+                        
+                        b_loss.backward(retain_graph=True)
+
+                        for p in self.parameters:
+                            if p.grad is not None:
+                                #if p.grad.is_cuda:
+                                #    saved_grad.append(p.grad.cpu())
+                                #else:
+                                saved_grad.append(p.grad.clone())
+                                p.grad.zero_()
+                            else:
+                                saved_grad.append(None)
+                        self.saved_grads.append(saved_grad)
+
+            else:
+                for b_loss in losses_to_balance:
+                    loss += b_loss
+
+
+            if type(loss) is not int:
+                loss.backward()
+                #for p in self.model.parameters():
+                #    if p.grad is not None:
+                #        assert(not torch.isnan(p.grad).any())
+
+            if self.balance_loss and "no-step" in lesson: #no-step is to split computation over multiple iterations. Disc does step
+                saved_grad=[]
+                for p in self.parameters:
+                    if p.grad is None:
+                        saved_grad.append(None)
+                    else:
+                        #if p.grad.is_cuda:
+                        #    saved_grad.append(p.grad.cpu())
+                        #else:
+                        saved_grad.append(p.grad.clone())
+                        p.grad.zero_()
+                self.saved_grads.append(saved_grad)
+
+            elif self.balance_loss and len(self.saved_grads)>0:
+                if 'sign_preserve' in self.balance_loss:
+                    abmean_Ds=[]
+                    nonzero_sum=0.0
+                    nonzero_count=0
                     for p in self.parameters:
                         if p.grad is not None:
-                            #if p.grad.is_cuda:
-                            #    saved_grad.append(p.grad.cpu())
-                            #else:
-                            saved_grad.append(p.grad.clone())
-                            p.grad.zero_()
+                            abmean_D = torch.abs(p.grad).mean()
+                            abmean_Ds.append(abmean_D)
+                            if abmean_D!=0:
+                                nonzero_sum+=abmean_D
+                                nonzero_count+=1
                         else:
-                            saved_grad.append(None)
-                    self.saved_grads.append(saved_grad)
-
-        else:
-            for b_loss in losses_to_balance:
-                loss += b_loss
-
-
-        if type(loss) is not int:
-            loss.backward()
+                            abmean_Ds.append(None)
+                    #incase on zero mean
+                    if nonzero_count>0:
+                        nonzero=nonzero_sum/nonzero_count
+                        for i in range(len(abmean_Ds)):
+                            if abmean_Ds[i]==0.0:
+                                abmean_Ds[i]=nonzero
+                if self.balance_loss.startswith('sign_preserve_var'):
+                    sum_multipliers=1
+                    for iterT,mult in self.balance_var_x.items():
+                        if int(iterT)<=iteration:
+                            multipliers=mult
+                            if type(multipliers) is not list:
+                                multipliers=[multipliers]
+                    multipliers = [self.lossWeights[x] if type(x) is str else x for x in multipliers]
+                    if self.ramp_qr_losses:
+                        if iteration<self.ramp_qr_losses_start:
+                            ramp=0
+                        elif iteration<self.ramp_qr_losses_end:
+                            ramp = (iteration-self.ramp_qr_losses_start)/(self.ramp_qr_losses_end-self.ramp_qr_losses_start)
+                        else:
+                            ramp =1
+                        multipliers = [m*ramp for m in multipliers]
+                    sum_multipliers+=sum(multipliers)
+                for gi,saved_grad in enumerate(self.saved_grads):
+                    if self.balance_loss.startswith('sign_preserve_var'):
+                        x=multipliers[gi]
+                    for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
+                        if R is not None:
+                            #R=R.to(p.device)
+                            assert(not torch.isnan(p.grad).any())
+                            if self.balance_loss=='sign_preserve': #This is good, although it assigns everything a weight of 1
+                                abmean_R = torch.abs(p.grad).mean()
+                                if abmean_R!=0:
+                                    p.grad += R*(abmean_Ds[i]/abmean_R)
+                            elif self.balance_loss=='sign_match':
+                                match_pos = (p.grad>0)*(R>0)
+                                match_neg = (p.grad<0)*(R<0)
+                                not_match = ~(match_pos+match_neg)
+                                p.grad[not_match] = 0 #zero out where signs don't match
+                            elif self.balance_loss=='sign_preserve_fixed':
+                                abmean_R = torch.abs(R).mean()
+                                if abmean_R!=0:
+                                    p.grad += R*(abmean_Ds[i]/abmean_R)
+                            elif self.balance_loss.startswith('sign_preserve_var'): #This is the best, as you can specify a weight for each balanced term
+                                abmean_R = torch.abs(R).mean()
+                                if abmean_R!=0:
+                                    p.grad += x*R*(abmean_Ds[i]/abmean_R)
+                            elif self.balance_loss.startswith('sign_preserve_x'):
+                                abmean_R = torch.abs(R).mean()
+                                if abmean_R!=0:
+                                    p.grad += self.balance_x*R*(abmean_Ds[i]/(abmean_R+1e-40))
+                            elif self.balance_loss=='orig':
+                                if R.nelement()>16:
+                                    mean_D = p.grad.mean()
+                                    mean_R = R.mean()
+                                    std_D = p.grad.std()
+                                    std_R = R.std()
+                                    if std_D==0 and std_R==0:
+                                        ratio=1
+                                    else:
+                                        if std_R==0:
+                                            std_R = 0.0000001
+                                        ratio = std_D/std_R
+                                    if ratio > 100:
+                                        ratio = 100
+                                    p.grad += (ratio*(R-mean_R)+mean_D)
+                                else:
+                                    match = (p.grad>0)*(R>0)
+                                    p.grad[match] += R[match]*0.001
+                                    p.grad[~match] *= .1
+                                    p.grad[~match] += R[~match]*0.0001
+                            else:
+                                raise NotImplementedError('Unknown gradient balance method: {}'.format(self.balance_loss))
+                            assert(not torch.isnan(p.grad).any())
+                self.saved_grads=[]
+                for p in self.parameters:
+                    if p.grad is not None:
+                        p.grad/=sum_multipliers
             #for p in self.model.parameters():
             #    if p.grad is not None:
             #        assert(not torch.isnan(p.grad).any())
+            #        p.grad[torch.isnan(p.grad)]=0
 
-        if self.balance_loss and "no-step" in lesson: #no-step is to split computation over multiple iterations. Disc does step
-            saved_grad=[]
-            for p in self.parameters:
-                if p.grad is None:
-                    saved_grad.append(None)
+            if 'no-step' not in lesson:
+                torch.nn.utils.clip_grad_value_(self.model.parameters(),2) #prevent huge gradients
+                for m in self.model.parameters():
+                    assert(not torch.isnan(m).any())
+
+                if 'disc' in lesson or 'auto-disc' in lesson or 'disc-style' in lesson or 'author-train' in lesson or 'disc_reg' in lesson:
+                    self.optimizer_discriminator.step()
+                elif  any(['auto-style' in l for l in lesson]):
+                    self.optimizer_gen_only.step()
                 else:
-                    #if p.grad.is_cuda:
-                    #    saved_grad.append(p.grad.cpu())
-                    #else:
-                    saved_grad.append(p.grad.clone())
-                    p.grad.zero_()
-            self.saved_grads.append(saved_grad)
-
-        elif self.balance_loss and len(self.saved_grads)>0:
-            if 'sign_preserve' in self.balance_loss:
-                abmean_Ds=[]
-                nonzero_sum=0.0
-                nonzero_count=0
-                for p in self.parameters:
-                    if p.grad is not None:
-                        abmean_D = torch.abs(p.grad).mean()
-                        abmean_Ds.append(abmean_D)
-                        if abmean_D!=0:
-                            nonzero_sum+=abmean_D
-                            nonzero_count+=1
-                    else:
-                        abmean_Ds.append(None)
-                #incase on zero mean
-                if nonzero_count>0:
-                    nonzero=nonzero_sum/nonzero_count
-                    for i in range(len(abmean_Ds)):
-                        if abmean_Ds[i]==0.0:
-                            abmean_Ds[i]=nonzero
-            if self.balance_loss.startswith('sign_preserve_var'):
-                sum_multipliers=1
-                for iterT,mult in self.balance_var_x.items():
-                    if int(iterT)<=iteration:
-                        multipliers=mult
-                        if type(multipliers) is not list:
-                            multipliers=[multipliers]
-                multipliers = [self.lossWeights[x] if type(x) is str else x for x in multipliers]
-                if self.ramp_qr_losses:
-                    if iteration<self.ramp_qr_losses_start:
-                        ramp=0
-                    elif iteration<self.ramp_qr_losses_end:
-                        ramp = (iteration-self.ramp_qr_losses_start)/(self.ramp_qr_losses_end-self.ramp_qr_losses_start)
-                    else:
-                        ramp =1
-                    multipliers = [m*ramp for m in multipliers]
-                sum_multipliers+=sum(multipliers)
-            for gi,saved_grad in enumerate(self.saved_grads):
-                if self.balance_loss.startswith('sign_preserve_var'):
-                    x=multipliers[gi]
-                for i,(R, p) in enumerate(zip(saved_grad, self.parameters)):
-                    if R is not None:
-                        #R=R.to(p.device)
-                        assert(not torch.isnan(p.grad).any())
-                        if self.balance_loss=='sign_preserve': #This is good, although it assigns everything a weight of 1
-                            abmean_R = torch.abs(p.grad).mean()
-                            if abmean_R!=0:
-                                p.grad += R*(abmean_Ds[i]/abmean_R)
-                        elif self.balance_loss=='sign_match':
-                            match_pos = (p.grad>0)*(R>0)
-                            match_neg = (p.grad<0)*(R<0)
-                            not_match = ~(match_pos+match_neg)
-                            p.grad[not_match] = 0 #zero out where signs don't match
-                        elif self.balance_loss=='sign_preserve_fixed':
-                            abmean_R = torch.abs(R).mean()
-                            if abmean_R!=0:
-                                p.grad += R*(abmean_Ds[i]/abmean_R)
-                        elif self.balance_loss.startswith('sign_preserve_var'): #This is the best, as you can specify a weight for each balanced term
-                            abmean_R = torch.abs(R).mean()
-                            if abmean_R!=0:
-                                p.grad += x*R*(abmean_Ds[i]/abmean_R)
-                        elif self.balance_loss.startswith('sign_preserve_x'):
-                            abmean_R = torch.abs(R).mean()
-                            if abmean_R!=0:
-                                p.grad += self.balance_x*R*(abmean_Ds[i]/(abmean_R+1e-40))
-                        elif self.balance_loss=='orig':
-                            if R.nelement()>16:
-                                mean_D = p.grad.mean()
-                                mean_R = R.mean()
-                                std_D = p.grad.std()
-                                std_R = R.std()
-                                if std_D==0 and std_R==0:
-                                    ratio=1
-                                else:
-                                    if std_R==0:
-                                        std_R = 0.0000001
-                                    ratio = std_D/std_R
-                                if ratio > 100:
-                                    ratio = 100
-                                p.grad += (ratio*(R-mean_R)+mean_D)
-                            else:
-                                match = (p.grad>0)*(R>0)
-                                p.grad[match] += R[match]*0.001
-                                p.grad[~match] *= .1
-                                p.grad[~match] += R[~match]*0.0001
-                        else:
-                            raise NotImplementedError('Unknown gradient balance method: {}'.format(self.balance_loss))
-                        assert(not torch.isnan(p.grad).any())
-            self.saved_grads=[]
-            for p in self.parameters:
-                if p.grad is not None:
-                    p.grad/=sum_multipliers
-        #for p in self.model.parameters():
-        #    if p.grad is not None:
-        #        assert(not torch.isnan(p.grad).any())
-        #        p.grad[torch.isnan(p.grad)]=0
-
-        if 'no-step' not in lesson:
-            torch.nn.utils.clip_grad_value_(self.model.parameters(),2) #prevent huge gradients
-            for m in self.model.parameters():
-                assert(not torch.isnan(m).any())
-
-            if 'disc' in lesson or 'auto-disc' in lesson or 'disc-style' in lesson or 'author-train' in lesson or 'disc_reg' in lesson:
-                self.optimizer_discriminator.step()
-            elif  any(['auto-style' in l for l in lesson]):
-                self.optimizer_gen_only.step()
-            else:
-                self.optimizer.step()
+                    self.optimizer.step()
 
         #assert(not torch.isnan(self.model.spacer.std).any())
         #for p in self.parameters:
@@ -654,7 +595,34 @@ class QRGenTrainer(BaseTrainer):
         return label_onehot.to(label.device)
 
     def run_decoder(self):
-        raise Exception(NotImplemented)
+        losses={}
+        try:
+            instance = self.sample_data_loader_iter.next()
+        except StopIteration:
+            self.sample_data_loader_iter = iter(self.sample_data_loader)
+            instance = self.sample_data_loader_iter.next()
+        images,targetvalid,targetchars = self._to_tensor_decode(instance)
+        char_gt = instance['gt_char']
+
+        valid_pred,char_pred = self.model.qr_net(images)
+        batch_size = images.size(0)
+        losses['charLoss'] = self.loss['char'](char_pred.reshape(batch_size*char_pred.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+        #assert(losses['charLoss']!=0)
+        #if losses['charLoss']<0.0001:
+        #   del losses['charLoss']
+        losses['validLoss'] = self.loss['valid'](valid_pred,targetvalid,*self.loss_params['valid'])
+        #    if losses['validLoss']<0.0001:
+        #        del losses['validLoss']
+
+        correctly_decoded=0
+        prepared_images = ((images+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
+        for b in range(batch_size):
+            read = util.zbar_decode(prepared_images[b])
+            if read==char_gt[b]:
+                correctly_decoded+=1
+            proper_ratio = correctly_decoded/batch_size
+        log={'decoder_accuracy':proper_ratio}
+        return losses,log
 
     def run(self,instance,lesson,get=[]):
         qr_image, targetvalid,targetchars = self._to_tensor(instance)
@@ -667,14 +635,10 @@ class QRGenTrainer(BaseTrainer):
             qr_image = qr_image[:path_batch_size]
             noise = mixing_noise(path_batch_size, self.model.style_dim, self.mixing, qr_image.device)
             gen_image, latents = self.model(qr_image,noise,return_latent=True)
-            if self.sample_disc and 'eval' not in lesson and 'valid' not in lesson:
-                self.add_gen_sample(gen_image)
         elif 'gen' in lesson or 'disc' in lesson or 'gen' in get:
             noise = mixing_noise(batch_size, self.model.style_dim, self.mixing, qr_image.device)
             gen_image = self.model(qr_image,noise) #TODO
 
-            if self.sample_disc and 'eval' not in lesson and 'valid' not in lesson:
-                self.add_gen_sample(gen_image)
         else:
             gen_image = None
 
@@ -797,22 +761,31 @@ class QRGenTrainer(BaseTrainer):
         if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
             correctly_decoded=0
             prepared_images = ((gen_image+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
+            isvalid=[]
+            decoded_chars=[]
             for b in range(batch_size):
                 read = util.zbar_decode(prepared_images[b])
                 #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
                 #readA = util.zbar_decode(qqq)
                 #assert(readA==instance['gt_char'][b])
                 #import pdb;pdb.set_trace()
+                decoded_chars.append(read)
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
-                elif self.i_cant:
-                    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),prepared_images[b])
-                #else:
+                    isvalid.append(True)
+                    #if self.i_cant:
+                    #    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),prepared_images[b])
+                else:
+                    isvalid.append(False)
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size
-                if proper_ratio ==1:
-                    self.i_cant=True
+                #if proper_ratio ==1 and self.save_unreadable:
+                #    self.i_cant=True
             log={'proper_QR':proper_ratio}
+
+            if self.curriculum.train_decoder and 'eval' not in lesson and 'valid' not in lesson:
+                self.sample_data_loader.dataset.add_gen_sample(gen_image,isvalid,decoded_chars)
+
             if 'valid' not in lesson and 'eval' not in lesson:
                 if self.modulate_pixel_loss=='momentum' and self.iteration>self.modulate_pixel_loss_start:
                     if proper_ratio>=self.proper_accept:
