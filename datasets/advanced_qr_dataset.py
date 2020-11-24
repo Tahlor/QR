@@ -6,7 +6,7 @@ import string
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
-
+import torchvision
 from collections import defaultdict
 import os
 import numpy as np
@@ -44,7 +44,15 @@ class AdvancedQRDataset(Dataset):
         self.char_to_index, self.index_to_char = _make_char_set(config.alphabet)
         self.data = None
         self.qr_size = config.image_size #full_config.model.input_size
+        self.final_size = full_config.model.input_size
+        self.resize_op = torchvision.transforms.Resize(self.final_size)
         self.coordconv = config.coordconv
+
+        # QR generation options
+        self.box_size = config["box_size"] if "box_size" in config else 1 # 6 in initial training
+        self.border = config["border"] if "border" in config else 2 # 1 in initial training
+        self.mask_pattern = config["mask_pattern"] if "mask_pattern" in config else None # 1 in initial training
+
 
         self.max_message_len = config.max_message_len
         if "background_image_path" in config:
@@ -98,7 +106,8 @@ class AdvancedQRDataset(Dataset):
                           rotate=True,
                           distortion=True,
                           occlude=True,
-                          background_images=None):
+                          background_images=None,
+                          distortion_prob=.7):
         """
 
 
@@ -119,7 +128,7 @@ class AdvancedQRDataset(Dataset):
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
 
-        if superimpose and background_images and np.random.random()>.3:
+        if superimpose and background_images and np.random.random()<distortion_prob:
             background_image = AdvancedQRDataset.get_random_image(background_images)
             image = data_utils.superimpose_images(image, background_image) #[:,:,np.newaxis]
 
@@ -129,24 +138,31 @@ class AdvancedQRDataset(Dataset):
         if rotate:
             raise NotImplemented
 
-        if occlude and np.random.random()>.3:
+        if occlude and np.random.random()<distortion_prob:
             image = data_utils.occlude(image)
 
-        if distortion and np.random.random()>.3:
+        if distortion and np.random.random()<distortion_prob:
             image = data_utils.elastic_transform(image)
 
-        if add_noise and np.random.random()>.3:
+        if add_noise and np.random.random()<distortion_prob:
             image = data_utils.gaussian_noise(image)
 
-        if blur and np.random.random()>.3:
+        if blur and np.random.random()<distortion_prob:
             image = data_utils.blur(image)
 
         return image
 
     @staticmethod
     def get_random_image(images):
-        img = random.choice(images) if images else "../dev/landscape.png"
-        return cv2.imread(filename=img, flags=cv2.IMREAD_GRAYSCALE)[:, :, np.newaxis]
+        while True:
+            try:
+                img = random.choice(images) if images else "../dev/landscape.png"
+                img = cv2.imread(filename=img, flags=cv2.IMREAD_GRAYSCALE)[:, :, np.newaxis]
+                if not img is None:
+                    break
+            except:
+                pass
+        return img
 
     def generate_qr_code(self, gt_char):
         qr = qrcode.QRCode(
@@ -256,11 +272,15 @@ class AdvancedQRDataset(Dataset):
         else:
             img_dict["image"] = FACTOR(data_utils.img2tensor(img_dict["image_undistorted"]))
 
+        if self.qr_size[0] != self.final_size[0]:
+            img_dict["image"] = self.resize_op(img_dict["image"])
+
         # Add coordconv
         if self.coordconv:
             img_dict["image"] = self.add_coordconv(img_dict["image"])
         # print(img_dict["image"])
         # stop
+
         return img_dict
 
 def _make_char_set(all_char_string):
@@ -328,6 +348,40 @@ def test_dataset():
                                 distortions=distortions)
     dataset[0]
     #test_distortions(dataset, image=dataset[0]["image_undistorted"].squeeze())
+
+class AdvancedQRDataset2(AdvancedQRDataset):
+    def __init__(self, dirPath,split,config, full_config, *args, **kwargs):
+        super().__init__(dirPath,split,config, full_config, *args, **kwargs)
+
+    def generate_qr_code(self, gt_char):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            #box_size=6,
+            #border=1,
+            #mask_pattern=1,
+            box_size=1,
+            border=2
+        )
+        gt_char = str(gt_char)
+        qr.add_data(gt_char)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black",
+                            back_color="white").resize(self.qr_size)
+        #print(np.array(img).shape)
+        img = np.array(img).astype(np.uint8) * 255
+
+        targetchar = torch.LongTensor(17).fill_(0)
+        for i,c in enumerate(gt_char):
+            targetchar[i]=self.char_to_index[c]
+        targetvalid = torch.FloatTensor([1])
+        return {
+            "gt_char": gt_char,
+            'targetchar': targetchar,
+            'targetvalid': targetvalid,
+            "image_undistorted": img
+        }
+
 
 def test():
     test_distortions()
