@@ -113,9 +113,15 @@ class QRWraper(BaseModel):
                     channel_multiplier=2
                 smaller='smaller' in config['discriminator']
                 if "patch" in config['discriminator'].lower():
-                    self.discriminator = SG2DiscriminatorPatch(256, channel_multiplier=channel_multiplier, smaller=smaller)
+                    self.discriminator = SG2DiscriminatorPatch(256,
+                                                               channel_multiplier=channel_multiplier,
+                                                               smaller=smaller,
+                                                               qr_size=21,
+                                                               padding=2)
                 else:
-                    self.discriminator=SG2Discriminator(256,channel_multiplier=channel_multiplier,smaller=smaller)
+                    self.discriminator=SG2Discriminator(256,
+                                                        channel_multiplier=channel_multiplier,
+                                                        smaller=smaller)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 

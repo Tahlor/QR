@@ -653,35 +653,8 @@ class QRGenTrainer(BaseTrainer):
         #        label_onehot[i,j,label[i,j]]=1
         return label_onehot.to(label.device)
 
-    def run_decoder():
-        losses={}
-        try:
-            try:
-                instance = self.sample_data_loader_iter.next()
-            except StopIteration:
-                self.sample_data_loader_iter = iter(self.sample_data_loader)
-                instance = self.sample_data_loader_iter.next()
-        images,targetvalid,targetchars = _to_tensor_decode(instace)
-        char_gt = instance['gt_char']
-
-        valid_pred,char_pred = self.model.qr_net(images)
-        losses['charLoss'] = self.loss['char'](char_pred.reshape(batch_size*char_pred.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
-        #assert(losses['charLoss']!=0)
-        #if losses['charLoss']<0.0001:
-        #   del losses['charLoss']
-        losses['validLoss'] = self.loss['valid'](valid_pred,targetvalid,*self.loss_params['valid'])
-        #    if losses['validLoss']<0.0001:
-        #        del losses['validLoss']
-
-        correctly_decoded=0
-        prepared_images = ((images+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
-        for b in range(batch_size):
-            read = util.zbar_decode(prepared_images[b])
-            if read==char_gt[b]:
-                correctly_decoded+=1
-            proper_ratio = correctly_decoded/batch_size
-        log={'decoder_accuracy':proper_ratio}
-        return losses,log
+    def run_decoder(self):
+        raise Exception(NotImplemented)
 
     def run(self,instance,lesson,get=[]):
         qr_image, targetvalid,targetchars = self._to_tensor(instance)

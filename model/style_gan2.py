@@ -11,7 +11,7 @@ from torch.autograd import Function
 
 from utils import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
 from .coordconv import addCoords
-
+from datasets import data_utils
 
 class PixelNorm(nn.Module):
     def __init__(self):
@@ -628,7 +628,9 @@ class ResBlock(nn.Module):
 
 
 class SG2Discriminator(nn.Module):
-    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False):
+    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False,
+                 *args,
+                 **kwargs):
         super().__init__()
         channels = {
             4: 512 if not smaller else 256,
@@ -690,9 +692,19 @@ class SG2Discriminator(nn.Module):
 
 class SG2DiscriminatorPatch(nn.Module):
 
-    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False):
+    def __init__(self, size,
+                 channel_multiplier=2,
+                 blur_kernel=[1, 3, 3, 1],
+                 smaller=False,
+                 corner_mask=True,
+                 qr_size=21,
+                 padding=2,
+                 threshold=0,
+                 *args,
+                 **kwargs):
         super().__init__()
-        smaller = True
+        print("USING PATCH LOSS")
+
         channels = {
             4: 512 if not smaller else 256,
             8: 512 if not smaller else 256,
@@ -711,7 +723,7 @@ class SG2DiscriminatorPatch(nn.Module):
         log_size = int(math.log(size, 2))
 
         in_channel = channels[size]
-
+        output_size = size/2**(log_size // 4)
         for i in range(log_size // 2, 2, -1):
             out_channel = channels[2 ** (i - 1)]
 
@@ -726,7 +738,21 @@ class SG2DiscriminatorPatch(nn.Module):
 
         self.final_conv = ConvLayer(in_channel + 1, 1, 3)
 
+        if corner_mask:
+            self.mask = data_utils.create_QR_corner_mask(img_size=size, qr_size=qr_size, padding=padding, threshold=threshold, bigger=False)
+            self.mask = self.mask.to("cuda")
+            scale = int(size // output_size)
+            self.receptive_field_mask = self.mask[:,::scale,::scale]
+        else:
+            self.receptive_field_mask = None
+            self.mask = None
+
+
     def forward(self, input,_=False):
+        # if not self.mask is None and False: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
+        #     input *= self.mask
+
+
         out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
         batch, channel, height, width = out.shape # batch, 256, 64, 64
@@ -742,7 +768,11 @@ class SG2DiscriminatorPatch(nn.Module):
 
         out = self.final_conv(out) # batch, 1, 64, 64
 
+        if not self.receptive_field_mask is None: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
+            out *= self.receptive_field_mask
+
         out = out.view(batch, -1)
+
         return out # B, 8192
 
 
