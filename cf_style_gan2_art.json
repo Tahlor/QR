@@ -122,6 +122,5 @@
         "generator": "StyleGAN2 small coordconv",
         "discriminator": "StyleGAN2 smaller"
 
-
     }
 }
