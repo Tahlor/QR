@@ -1,4 +1,5 @@
-
+#This class is resposible for assigning the "lesson" or tasks to each iteration
+#It also reads through all the lessons and sets flags so the trainer object can be ready for future lessons
 #{0: [[1,'gen','auto'],[1,'disc']]
 class Curriculum:
 
@@ -10,6 +11,7 @@ class Curriculum:
         self.need_sep_style_ex_opt = False
         self.need_style_in_disc = False
         self.sample_disc=False
+        self.train_decoder=False
         self.g_reg_every=0
         self.d_reg_every=0
         if lesson_desc==0:
@@ -34,6 +36,8 @@ class Curriculum:
                                 self.need_style_in_disc = True
                             if 'sample-disc' in a:
                                 self.sample_disc=True
+                            if 'decoder' in a:
+                                self.train_decoder=True
                             new_lesson.append(a)
                             if 'disc' not in a and a!='split-style' and 'triplet' not in a: #as GAN losses aren't too informative...
                                 self.valid.add(a)

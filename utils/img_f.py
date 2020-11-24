@@ -184,14 +184,16 @@ def superimposeImages(img1, img2, img2_wt=None):
     if img1.ndim == 2:
         img1 = img1[:,:,np.newaxis]
     if img2_wt is None:
-        img2_wt = np.clip(np.random.randn()/3+.2,0,.9)
+        #img2_wt = np.clip(np.random.randn()/3+.2,0,.9)
+        img2_wt = np.random.random()
     if isinstance(img2, str):
         img2 = np.array(cv2.imread(img2)).astype(np.uint8)*255
     #print(img1.shape, img1.dtype, img2.shape, img2.dtype)
     y,x,c = img1.shape
     #cropped = img2[:x,:y,:]
-    img2 = resize(img2, (x,y))[:,:,np.newaxis]
+    img2 = resize(img2, (y,x))
     added_image = img2*img2_wt + img1*(1-img2_wt) #cv2.addWeighted(img2, img2_wt, img1, 1-img2_wt, 0)
+    assert(added_image.min()>=0)
     return added_image
 
 if __name__ == "__main__":

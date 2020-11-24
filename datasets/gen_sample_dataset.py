@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import Dataset
-import random
+import random, os
+from .advanced_qr_dataset2 import AdvancedQRDataset2
+from utils import util
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
@@ -11,11 +13,16 @@ def collate(batch):
             }
 
 class GenSampleDataset(Dataset):
-    def __init__(self, batch_size,seed_config,cache_dir):
+    def __init__(self, config, seed_config):
         self.seed = AdvancedQRDataset2(None,'train',seed_config)
         self.char_to_index = self.seed.char_to_index
         self.char_set_len = len(self.seed.char_to_index)
         self.max_message_len = self.seed.max_message_len
+
+        cache_dir = config['cache_dir']
+        self.max_saved= config['max_saved']
+        self.still_seed_prob = config['still_seed_prob'] if 'still_seed_prob' in config else 0.005
+        self.forget_new_freq = config['forget_new_freq'] if 'forget_new_freq' in config else 0.05
 
         self.saved_valid=[]
         self.saved_invalid=[]
@@ -36,18 +43,16 @@ class GenSampleDataset(Dataset):
         isvalid = random.random()<0.5
         if isvalid:
             prob_sample = (len(self.saved_valid)/self.max_saved) *(1-self.still_seed_prob)
+        else:
+            prob_sample = (len(self.saved_invalid)/self.max_saved) *(1-self.still_seed_prob)
         if random.random()<prob_sample:
-            img,valid,chars = self.sample_gen(isvalid)
-            targetchar = torch.LongTensor(self.char_set_len).fill_(0)
-            for i,c in enumerate(chars):
-                targetchar[i]=self.char_to_index[c]
-            targetvalid = torch.FloatTensor([1])
+            img,targetvalid,targetchar,chars = self.sample_gen(isvalid)
 
             return {
                 "image": img,
-                "gt_char": gt_char,
+                "gt_char": chars,
                 'targetchar': targetchar,
-                'targetvalid': torch.FloatTensor([valid])
+                'targetvalid': targetvalid
             }
         else:
             return self.seed[random.randrange(len(self.seed))]
@@ -56,7 +61,7 @@ class GenSampleDataset(Dataset):
         return 256
 
     def sample_gen(self,isvalid):
-        if isvalid[b]:
+        if isvalid:
             saved = self.saved_valid
             saved_cache = self.saved_cache_valid
         else:
@@ -71,13 +76,14 @@ class GenSampleDataset(Dataset):
             image,chars = inst
             for i,c in enumerate(chars):
                 targetchar[i]=self.char_to_index[c]
-            targetvalid = torch.FloatTensor(batch_size).ones_()
+            targetvalid = torch.FloatTensor(1).ones_()
         else:
             image = inst
-            targetvalid = torch.FloatTensor(batch_size).zero_()
+            targetvalid = torch.FloatTensor(1).zero_()
+            chars=None
 
         
-        return image,targetvalid,targetchar
+        return image,targetvalid,targetchar,chars
 
     def add_gen_sample(self,images,isvalid,chars):
         batch_size = images.size(0)
@@ -85,7 +91,7 @@ class GenSampleDataset(Dataset):
 
         for b in range(batch_size):
             if isvalid[b]:
-                inst = (images[b],isvalid[b],chars[b])
+                inst = (images[b],chars[b])
                 saved = self.saved_valid
                 saved_cache = self.saved_cache_valid
             else:
@@ -93,7 +99,7 @@ class GenSampleDataset(Dataset):
                 saved = self.saved_invalid
                 saved_cache = self.saved_cache_invalid
 
-            if len(saved)>= self.max_stored:
+            if len(saved)>= self.max_saved:
                 if random.random() > self.forget_new_freq:
                     change = random.randint(0,len(saved)-1)
                     torch.save(inst,saved[change])

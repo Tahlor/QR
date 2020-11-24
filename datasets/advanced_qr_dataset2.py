@@ -3,6 +3,7 @@ import json
 #from easydict import EasyDict as edict
 import string
 import torch
+import torchvision
 from torch.utils.data import Dataset
 from torch.autograd import Variable
 
@@ -53,12 +54,18 @@ class AdvancedQRDataset2(Dataset):
         self.max_message_len = config['max_message_len'] if 'max_message_len' in config else 17
         self.min_message_len = config['min_message_len'] if 'min_message_len' in config else 4
         if "background_image_path" in config:
-            path = (Path(config['background_image_path']) / "files.json")
-            if path.exists():
-                self.images = json.load(path.open())
+            if 'use_lsun' in config and config['use_lsun']:
+                self.images = torchvision.datasets.LSUN(config['background_image_path'],classes=['bedroom_train'])
             else:
-                self.images = [x.as_posix() for x in Path(config['background_image_path']).rglob("*.JPEG")]
-                json.dump(self.images, path.open("w"))
+                path = (Path(config['background_image_path']) / "files.json")
+                if path.exists():
+                    self.images = json.load(path.open())
+                else:
+                    self.images = [x.as_posix() for x in Path(config['background_image_path']).rglob("*.JPEG")]
+                    self.images += [x.as_posix() for x in Path(config['background_image_path']).rglob("*.jpg")]
+                    self.images += [x.as_posix() for x in Path(config['background_image_path']).rglob("*.jpeg")]
+                    self.images += [x.as_posix() for x in Path(config['background_image_path']).rglob("*.png")]
+                    json.dump(self.images, path.open("w"))
         else:
             self.images = None
 
@@ -117,10 +124,9 @@ class AdvancedQRDataset2(Dataset):
         """
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
-
-        if superimpose and background_images and np.random.random()>.3:
+        if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
-            image = img_f.superimpose_images(image, background_image) #[:,:,np.newaxis]
+            image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
 
         #if homography and False: # DOESN'T WORK
         #    image = data_utils.homography(image)
@@ -131,13 +137,13 @@ class AdvancedQRDataset2(Dataset):
         if occlude and np.random.random()>.3:
             image = data_utils.occlude(image)
 
-        if distortion and np.random.random()>.3:
+        if distortion and np.random.random()>.4:
             image = data_utils.elastic_transform(image)
 
-        if add_noise and np.random.random()>.3:
+        if add_noise and np.random.random()>.4:
             image = data_utils.gaussian_noise(image)
 
-        if blur and np.random.random()>.3:
+        if blur and np.random.random()>.4:
             image = data_utils.blur(image)
 
         return image
@@ -145,7 +151,10 @@ class AdvancedQRDataset2(Dataset):
     @staticmethod
     def get_random_image(images):
         img = random.choice(images) if images else "../dev/landscape.png"
-        return img_f.imread(filename=img)
+        if type(img) is str:
+            return img_f.imread(img)
+        else:
+            return np.array(img[0])
 
     def generate_qr_code(self, gt_char):
         qr = qrcode.QRCode(
