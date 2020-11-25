@@ -195,6 +195,9 @@ class AdvancedQRDataset2(Dataset):
             #img1 = img_dict["image"].clone()
             img = AdvancedQRDataset2.apply_distortions(img_dict["image_undistorted"].copy(), **self.distortions)
             gt_char = util.zbar_decode(img)
+            #assert(gt_char is None or type(gt_char) is str)
+            if type(gt_char) is not str:
+                gt_char=None
         else:
             img = img_dict["image_undistorted"]
             gt_char = img_dict['gt_char']

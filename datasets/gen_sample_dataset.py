@@ -70,8 +70,13 @@ class GenSampleDataset(Dataset):
         images=[]
 
         targetchar = torch.LongTensor(self.max_message_len).fill_(0)
-        i = random.randint(0,len(saved)-1)
-        inst = torch.load(saved[i])
+        for i in range(50):
+            try: #sometimes write errors occur (model crash?) this smooths these over
+                i = random.randint(0,len(saved)-1)
+                inst = torch.load(saved[i])
+                break
+            except:
+                continue
         if isvalid:
             image,chars = inst
             for i,c in enumerate(chars):

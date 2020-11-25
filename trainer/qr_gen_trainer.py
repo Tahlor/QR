@@ -616,12 +616,19 @@ class QRGenTrainer(BaseTrainer):
 
         correctly_decoded=0
         prepared_images = ((images+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
+        valid_size=0
         for b in range(batch_size):
-            read = util.zbar_decode(prepared_images[b])
-            if read==char_gt[b]:
-                correctly_decoded+=1
-            proper_ratio = correctly_decoded/batch_size
-        log={'decoder_accuracy':proper_ratio}
+            if targetvalid[b]:
+                read = util.zbar_decode(prepared_images[b])
+                if read==char_gt[b]:
+                    correctly_decoded+=1
+                valid_size+=1
+        proper_ratio = correctly_decoded/valid_size
+        correctly_valid_pred = (targetvalid==(valid_pred>0)).float().mean().item()
+        log={
+                'decoder_char_accuracy':proper_ratio,
+                'decoder_valid_accuracy':correctly_valid_pred
+                }
         return losses,log
 
     def run(self,instance,lesson,get=[]):
