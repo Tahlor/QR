@@ -11,7 +11,7 @@ from torch.autograd import Function
 
 from utils import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
 from .coordconv import addCoords
-
+from datasets import data_utils
 
 class PixelNorm(nn.Module):
     def __init__(self):
@@ -628,7 +628,9 @@ class ResBlock(nn.Module):
 
 
 class SG2Discriminator(nn.Module):
-    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False):
+    def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False,
+                 *args,
+                 **kwargs):
         super().__init__()
         channels = {
             4: 512 if not smaller else 256,
@@ -642,6 +644,7 @@ class SG2Discriminator(nn.Module):
             256: 16 * channel_multiplier,
         }
 
+        # 3 -> 32 channels
         convs = [ConvLayer(3, channels[size], 1)]
 
         log_size = int(math.log(size, 2))
@@ -667,9 +670,9 @@ class SG2Discriminator(nn.Module):
         )
 
     def forward(self, input,_=False):
-        out = self.convs(input)
+        out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
-        batch, channel, height, width = out.shape
+        batch, channel, height, width = out.shape # Batch, 512, 4, 4
         group = min(batch, self.stddev_group)
         group = batch//(batch//group)
         stddev = out.view(
@@ -678,14 +681,100 @@ class SG2Discriminator(nn.Module):
         stddev = torch.sqrt(stddev.var(0, unbiased=False) + 1e-8)
         stddev = stddev.mean([2, 3, 4], keepdims=True).squeeze(2)
         stddev = stddev.repeat(group, 1, height, width)
-        out = torch.cat([out, stddev], 1)
+        out = torch.cat([out, stddev], 1) # -> B,513,4,4
 
         out = self.final_conv(out)
 
-        out = out.view(batch, -1)
+        out = out.view(batch, -1) # B, 8192
         out = self.final_linear(out)
 
         return out
+
+class SG2DiscriminatorPatch(nn.Module):
+
+    def __init__(self, size,
+                 channel_multiplier=2,
+                 blur_kernel=[1, 3, 3, 1],
+                 smaller=False,
+                 corner_mask=True,
+                 qr_size=21,
+                 padding=2,
+                 threshold=0,
+                 *args,
+                 **kwargs):
+        super().__init__()
+        print("USING PATCH LOSS")
+
+        channels = {
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
+            4: 512 if not smaller else 256,
+            8: 512 if not smaller else 256,
+            16: 256 * channel_multiplier,
+            32: 128 * channel_multiplier,
+            64: 64 * channel_multiplier,
+            128: 32 * channel_multiplier,
+            256: 16 * channel_multiplier,
+        }
+
+        # 3 -> 32 channels
+        convs = [ConvLayer(3, channels[size], 1)]
+
+        log_size = int(math.log(size, 2))
+
+        in_channel = channels[size]
+        output_size = size/2**(log_size // 4)
+        for i in range(log_size // 2, 2, -1):
+            out_channel = channels[2 ** (i - 1)]
+
+            convs.append(ResBlock(in_channel, out_channel, blur_kernel))
+
+            in_channel = out_channel
+
+        self.convs = nn.Sequential(*convs)
+
+        self.stddev_group = 4
+        self.stddev_feat = 1
+
+        self.final_conv = ConvLayer(in_channel + 1, 1, 3)
+
+        if corner_mask:
+            self.mask = data_utils.create_QR_corner_mask(img_size=size, qr_size=qr_size, padding=padding, threshold=threshold, bigger=False)
+            self.mask = self.mask.to("cuda")
+            scale = int(size // output_size)
+            self.receptive_field_mask = self.mask[:,::scale,::scale]
+        else:
+            self.receptive_field_mask = None
+            self.mask = None
+
+
+    def forward(self, input,_=False):
+        # if not self.mask is None and False: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
+        #     input *= self.mask
+
+
+        out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
+
+        batch, channel, height, width = out.shape # batch, 256, 64, 64
+        group = min(batch, self.stddev_group)
+        group = batch//(batch//group)
+        stddev = out.view(
+            group, -1, self.stddev_feat, channel // self.stddev_feat, height, width
+        )
+        stddev = torch.sqrt(stddev.var(0, unbiased=False) + 1e-8)
+        stddev = stddev.mean([2, 3, 4], keepdims=True).squeeze(2)
+        stddev = stddev.repeat(group, 1, height, width)
+        out = torch.cat([out, stddev], 1) # -> B,513,4,4
+
+        out = self.final_conv(out) # batch, 1, 64, 64
+
+        if not self.receptive_field_mask is None: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
+            out *= self.receptive_field_mask
+
+        out = out.view(batch, -1)
+
+        return out # B, 8192
+
 
 import torch
 import torch.nn as nn
@@ -700,7 +789,7 @@ class ConvBlock(nn.Sequential):
         self.add_module('LeakyRelu',nn.LeakyReLU(0.2, inplace=True))
 
 class WDiscriminator(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, opt): # size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False
         super(WDiscriminator, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = int(opt.nfc)

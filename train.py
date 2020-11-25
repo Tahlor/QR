@@ -103,6 +103,8 @@ if __name__ == '__main__':
                         help='config file path (default: None)')
     parser.add_argument('-r', '--resume', default=None, type=str,
                         help='path to latest checkpoint (default: None)')
+    parser.add_argument('-o', '--overwrite', default=False, action="store_true",
+                        help='path to latest checkpoint (default: None)')
     parser.add_argument('-s', '--soft_resume', default=None, type=str,
                         help='path to checkpoint that may or may not exist (default: None)')
     parser.add_argument('-g', '--gpu', default=None, type=int,
@@ -130,7 +132,7 @@ if __name__ == '__main__':
             directory = os.fsencode(path)
             for file in os.listdir(directory):
                 filename = os.fsdecode(file)
-                if 'checkpoint' in filename: 
+                if 'checkpoint' in filename and not args.overwrite:
                     assert False, "Path {} already used!".format(path)
     assert config is not None
     supercomputer = config['super_computer'] if 'super_computer' in config else False
