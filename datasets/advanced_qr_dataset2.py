@@ -209,7 +209,10 @@ class AdvancedQRDataset2(Dataset):
         targetchar = torch.LongTensor(self.max_message_len).fill_(0)
         if gt_char is not None:
             for i,c in enumerate(gt_char):
-                targetchar[i]=self.char_to_index[c]
+                try:
+                    targetchar[i]=self.char_to_index[c]
+                except KeyError:
+                    pass
             targetvalid = torch.FloatTensor([1])
         else:
             targetvalid = torch.FloatTensor([0])
