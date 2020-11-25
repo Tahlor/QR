@@ -11,7 +11,10 @@ from torch.autograd import Function
 
 from utils import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
 from .coordconv import addCoords
-from datasets import data_utils
+try:
+    from datasets import data_utils
+except:
+    pass
 
 class PixelNorm(nn.Module):
     def __init__(self):
