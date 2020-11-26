@@ -81,7 +81,7 @@ class GenSampleDataset(Dataset):
             image,chars = inst
             for i,c in enumerate(chars):
                 targetchar[i]=self.char_to_index[c]
-            targetvalid = torch.FloatTensor(1).ones_()
+            targetvalid = torch.FloatTensor(1).one_()
         else:
             image = inst
             targetvalid = torch.FloatTensor(1).zero_()
