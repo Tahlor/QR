@@ -56,6 +56,11 @@ class QRWraper(BaseModel):
                 qr_config['arch'] = 'DecoderCNN'
             self.qr_net = eval(qr_config['arch'])(qr_config)
             self.qr_net.load_state_dict( qr_state_dict )
+        elif 'qr_net' in config:
+            qr_config = config['qr_net']
+            if 'arch' not in qr_config:
+                qr_config['arch'] = 'DecoderCNN'
+            self.qr_net = eval(qr_config['arch'])(qr_config)
         else:
             self.qr_net = None
 
