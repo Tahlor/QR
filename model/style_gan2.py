@@ -632,6 +632,7 @@ class ResBlock(nn.Module):
 
 class SG2Discriminator(nn.Module):
     def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False,
+                 mask_corners=0,
                  *args,
                  **kwargs):
         super().__init__()
@@ -646,6 +647,8 @@ class SG2Discriminator(nn.Module):
             128: 32 * channel_multiplier,
             256: 16 * channel_multiplier,
         }
+
+        self.mask_corners=mask_corners
 
         # 3 -> 32 channels
         convs = [ConvLayer(3, channels[size], 1)]
@@ -673,6 +676,11 @@ class SG2Discriminator(nn.Module):
         )
 
     def forward(self, input,_=False):
+        if self.mask_corners>0:
+            #mask three corners (which have QR anchors)
+            input[:,:,0:self.mask_corners,0:self.mask_corners]=0
+            input[:,:,-self.mask_corners:,0:self.mask_corners]=0
+            input[:,:,0:self.mask_corners,-self.mask_corners:]=0
         out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
         batch, channel, height, width = out.shape # Batch, 512, 4, 4
