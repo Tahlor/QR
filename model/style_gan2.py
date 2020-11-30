@@ -649,6 +649,12 @@ class SG2Discriminator(nn.Module):
         }
 
         self.mask_corners=mask_corners
+        if mask_corners>0:
+            self.corner_mask = torch.FloatTensor(256,256).fill_(1)
+            self.corner_mask[0:self.mask_corners,0:self.mask_corners]*=0
+            self.corner_mask[-self.mask_corners:,0:self.mask_corners]*=0
+            self.corner_mask[0:self.mask_corners,-self.mask_corners:]*=0
+            self.corner_mask = self.corner_mask[None,None,...] #add batch and channel dim
 
         # 3 -> 32 channels
         convs = [ConvLayer(3, channels[size], 1)]
@@ -675,12 +681,15 @@ class SG2Discriminator(nn.Module):
             EqualLinear(channels[4], 1),
         )
 
-    def forward(self, input,_=False,no_mask=False):
-        if self.mask_corners>0 and not no_mask:
+    def forward(self, input,_=False):
+        if self.mask_corners>0:
             #mask three corners (which have QR anchors)
-            input[:,:,0:self.mask_corners,0:self.mask_corners]*=0
-            input[:,:,-self.mask_corners:,0:self.mask_corners]*=0
-            input[:,:,0:self.mask_corners,-self.mask_corners:]*=0
+            #input[:,:,0:self.mask_corners,0:self.mask_corners]*=0
+            #input[:,:,-self.mask_corners:,0:self.mask_corners]*=0
+            #input[:,:,0:self.mask_corners,-self.mask_corners:]*=0
+            if input.is_cuda and not self.corner_mask.is_cuda:
+                self.corner_mask = self.corner_mask.to(input.device)
+            input = input*self.corner_mask
 
         out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
@@ -760,7 +769,7 @@ class SG2DiscriminatorPatch(nn.Module):
             self.mask = None
 
 
-    def forward(self, input,_=False,no_mask=None):
+    def forward(self, input,_=False):
         # if not self.mask is None and False: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
         #     input *= self.mask
 
