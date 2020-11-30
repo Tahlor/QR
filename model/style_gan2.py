@@ -675,12 +675,13 @@ class SG2Discriminator(nn.Module):
             EqualLinear(channels[4], 1),
         )
 
-    def forward(self, input,_=False):
-        if self.mask_corners>0:
+    def forward(self, input,_=False,no_mask=False):
+        if self.mask_corners>0 and not no_mask:
             #mask three corners (which have QR anchors)
             input[:,:,0:self.mask_corners,0:self.mask_corners]*=0
             input[:,:,-self.mask_corners:,0:self.mask_corners]*=0
             input[:,:,0:self.mask_corners,-self.mask_corners:]*=0
+
         out = self.convs(input) # input: BATCH, CHANNEL, H, W (256x256)
 
         batch, channel, height, width = out.shape # Batch, 512, 4, 4
@@ -759,7 +760,7 @@ class SG2DiscriminatorPatch(nn.Module):
             self.mask = None
 
 
-    def forward(self, input,_=False):
+    def forward(self, input,_=False,no_mask=None):
         # if not self.mask is None and False: # FIX THIS -- ALSO JUST GO WITH THE MASK ON THE RECEPTIVE FIELD
         #     input *= self.mask
 

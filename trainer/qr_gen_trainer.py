@@ -682,7 +682,7 @@ class QRGenTrainer(BaseTrainer):
 
         if 'disc_reg' in lesson:
             real.requires_grad = True
-            real_pred = self.model.discriminator(real)
+            real_pred = self.model.discriminator(real,no_mask=True)
             r1_loss = d_r1_loss(real_pred, real)
             losses['disc_regLoss'] = self.r1 / 2 * r1_loss * self.curriculum.d_reg_every + 0 * real_pred[0]
 
