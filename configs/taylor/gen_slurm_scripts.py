@@ -41,7 +41,7 @@ conda activate "/zgrouphome/fslg_qr/env/qr"
 cd "/lustre/scratch/grp/fslg_qr/qr2"
 which python
 
-python -u train.py --config "./configs/{config_path.as_posix()}" {resume}
+python -u train.py --config "./configs/taylor/{config_path.as_posix()}" {resume}
 
 """
     out_path = Path(f"{outpath}/{config_name}.sh")
