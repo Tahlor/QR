@@ -27,15 +27,18 @@ def create_script(config_path, outpath="./slurm"):
 
 #%Module
 
-module purge
-module load cuda/10.1
-module load cudnn/7.6
+# module purge
+# module load cuda/10.1
+# module load cudnn/7.6
+module load gcc/7
+module load cuda/9.2
+module load cudnn/7.1
 
-export PATH="{ENV}:$PATH"
+export PATH="/zgrouphome/fslg_qr/env/qr:$PATH"
 eval "$(conda shell.bash hook)"
-conda activate "{ENV}"
+conda activate "/zgrouphome/fslg_qr/env/qr"
 
-cd "/lustre/scratch/grp/fslg_qr/qr"
+cd "/lustre/scratch/grp/fslg_qr/qr2"
 which python
 
 python -u train.py --config "./configs/{config_path.as_posix()}" {resume}

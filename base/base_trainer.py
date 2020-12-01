@@ -117,10 +117,13 @@ class BaseTrainer:
                                                                       **config['optimizer_discriminator'])
             else:
                 self.optimizer_discriminator = None
-            if self.curriculum.train_decoder:
-                to_opt = [{'params': decoder_params}]
-                self.optimizer_decoder = getattr(optim, config['optimizer_type_decoder'])(to_opt,
-                                                                         **config['optimizer_decoder'])
+            try:
+                if self.curriculum.train_decoder:
+                    to_opt = [{'params': decoder_params}]
+                    self.optimizer_decoder = getattr(optim, config['optimizer_type_decoder'])(to_opt,
+                                                                             **config['optimizer_decoder'])
+            except:
+                pass
 
             if self.curriculum is not None and self.curriculum.need_sep_gen_opt:
                 to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
