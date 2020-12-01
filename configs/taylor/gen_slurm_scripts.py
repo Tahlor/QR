@@ -2,17 +2,29 @@ import os
 import json
 from pathlib import Path
 from easydict import EasyDict as edict
+import warnings
 
+def get_root():
+    file_dir = Path(os.path.dirname(__file__)).resolve()
+    for par in file_dir.parents:
+        if par.parent.name =="fslg_qr":
+            return par
+    warnings.warn("Couldn't find parent")
+    return "."
+
+ROOT = get_root()
 ENV = "/zgrouphome/fslg_qr/env/qr"
 Path(f"./auto/scripts").mkdir(parents=True, exist_ok=True)
+
 def create_script(config_path, outpath="./slurm"):
-    config_name = config_path.stem.replace("___","")
-    checkpoint = Path(f"../saved/{config_name}/checkpoint-latest.pth")
+    config_name = config_path.stem.replace("___","").replace("cf_","")
+    checkpoint = ROOT / Path(f"saved/{config_name}/checkpoint-latest.pth")
     if checkpoint.exists():
         checkpoint = f"./saved/{config_name}/checkpoint-latest.pth"
         resume = f"""--resume "{checkpoint}" """
     else:
         resume = ""
+    print(checkpoint, "resume command", resume)
     script = f"""#!/bin/bash
 #SBATCH --gres=gpu:1
 #SBATCH -C 'rhel7&pascal'

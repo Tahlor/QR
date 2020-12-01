@@ -1,5 +1,5 @@
 {
-    "name":"taylor_style_gan2_PATCH_art_corner",
+    "name":"cf_taylor_style_gan2_PATCH_art_corner",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -191,7 +191,7 @@
             "0":[]
         },
         "use_learning_schedule":false,
-        "print_dir":"train_out/taylor_style_gan2_art",
+        "print_dir":null,
         "serperate_print_every":5000,
         "print_every":250
     },
