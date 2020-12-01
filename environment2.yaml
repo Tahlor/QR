@@ -13,8 +13,6 @@ dependencies:
   - numpy
   - pytorch>=1.6
   - cudatoolkit
-  #- nvcc_linux-64
-  - cudnn
   - scikit-learn
   - cython
   - matplotlib

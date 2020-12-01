@@ -48,6 +48,15 @@ class AdvancedQRDataset(Dataset):
         self.resize_op = torchvision.transforms.Resize(self.final_size)
         self.coordconv = config.coordconv
 
+        # QR generation options
+        self.box_size = config["box_size"] if "box_size" in config else 1 # 6 in initial training
+        self.border = config["border"] if "border" in config else 2 # 1 in initial training
+        self.mask_pattern = config["mask_pattern"] if "mask_pattern" in config else None # 1 in initial training
+        # QR error correct levels
+        error_levels = {"l":1, "m":0, "q":3, "h":2} # L < M < Q < H
+
+        self.error_level = error_levels[config["error_level"]]
+
 
         self.max_message_len = config.max_message_len
         if "background_image_path" in config:
@@ -162,8 +171,8 @@ class AdvancedQRDataset(Dataset):
     def generate_qr_code(self, gt_char):
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=6,
+            error_correction=self.error_level,
+            box_size=self.box_size,
             border=1,
             mask_pattern=1,
         )
@@ -320,30 +329,6 @@ def test_distortions(dataset=AdvancedQRDataset, image="../dev/landscape.png"):
     plt.imshow(x); plt.show()
     assert np.allclose(x, img)
 
-
-def test_dataset():
-    config = "../configs/___distortions.conf"
-    config = edict(json.load(Path(config).open()))
-    config = data_utils.make_config_consistent(config)
-    images = json.load((Path(config.data_loader.background_image_path) / "files.json").open())
-    distortions = {"homography":False,
-                                "blur":False,
-                                "superimpose":True,
-                                "add_noise":False,
-                                "distortion":False,
-                                "rotate":False,
-                                "occlude":True,
-                                "background_images": images}
-
-
-    dataset = AdvancedQRDataset(dirPath=None,
-                                split="train",
-                                config=config.data_loader,
-                                full_config=config,
-                                distortions=distortions)
-    dataset[0]
-    #test_distortions(dataset, image=dataset[0]["image_undistorted"].squeeze())
-
 class AdvancedQRDataset2(AdvancedQRDataset):
     def __init__(self, dirPath,split,config, full_config, *args, **kwargs):
         super().__init__(dirPath,split,config, full_config, *args, **kwargs)
@@ -377,13 +362,39 @@ class AdvancedQRDataset2(AdvancedQRDataset):
             "image_undistorted": img
         }
 
+def test_dataset():
+    config = "../configs/DEFAULT.conf"
+    config = edict(json.load(Path(config).open()))
+    config = data_utils.make_config_consistent(config)
+    config.data_loader.box_size = 2
+    config.data_loader.background_image_path = "/media/taylor/Seagate Backup Plus Drive/imagenet/imagenet-object-localization-challenge/imagenet_object_localization_patched2019/ILSVRC/Data/CLS-LOC/train"
+    images = json.load((Path(config.data_loader.background_image_path) / "files.json").open())
+    distortions = {"homography":False,
+                                "blur":False,
+                                "superimpose":True,
+                                "add_noise":False,
+                                "distortion":False,
+                                "rotate":False,
+                                "occlude":True,
+                                "background_images": images}
+
+
+    dataset = AdvancedQRDataset(dirPath=None,
+                                split="train",
+                                config=config.data_loader,
+                                full_config=config,
+                                distortions=distortions)
+    dataset[0]
+    test_distortions(dataset, image=dataset[0]["image_undistorted"].squeeze())
+
+
 
 def test():
     test_distortions()
 
 def test_loader():
     import data_loaders
-    config = "../configs/___distortions.conf"
+    config = "../configs/DEFAULT.conf"
     config = edict(json.load(Path(config).open()))
     config = data_utils.make_config_consistent(config)
     x = data_loaders.getDataLoader(config,"train")

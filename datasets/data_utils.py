@@ -82,7 +82,10 @@ def make_config_consistent(config):
     elif "image_size" in config.data_loader:
         config.data_loader.final_size = config.data_loader.image_size[0]
 
-    if config.data_loader.coordconv:
+    if "error_level" not in config.data_loader:
+        config.data_loader.error_level = "l"
+
+    if "coordconv" in config.data_loader and config.data_loader.coordconv:
         config.model.input_channels = 3
     else:
         config.model.input_channels = 1
