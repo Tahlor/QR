@@ -73,7 +73,7 @@
         "disc_reg": 1.0,
         "char": 0.5,
         "valid": 1.0,
-        "pixel": 1.0
+        "pixel": 1.5
 
     },
     "loss_params":
