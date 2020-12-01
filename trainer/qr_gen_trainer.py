@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -133,6 +134,10 @@ class QRGenTrainer(BaseTrainer):
 
         #This is for saving results during training!
         self.print_dir = config['trainer']['print_dir'] if 'print_dir' in config['trainer'] else None
+        if self.print_dir is None:
+            self.print_dir = (Path("./train_out/") / config['name']).as_posix()
+
+        Path(self.print_dir).mkdir(exist_ok=True, parents=True)
         if self.print_dir is not None:
             util.ensure_dir(self.print_dir)
         self.print_every = config['trainer']['print_every'] if 'print_every' in config['trainer'] else 100
@@ -141,8 +146,6 @@ class QRGenTrainer(BaseTrainer):
         self.last_print_images=defaultdict(lambda: 0)
         self.print_next_gen=False
         self.print_next_auto=False
-
-
 
         #StyleGAN2 parameters
         self.StyleGAN2 = True

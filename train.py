@@ -139,6 +139,9 @@ if __name__ == '__main__':
     supercomputer = supercomputer or not args.ping
 
     name=config['name']
+    if name[0:3] in ["cf_", "___"]:
+        name = config["name"] = name[3:]
+
     file_name = args.config
     if '/' in file_name:
         file_name = file_name[file_name.rindex('/')+4:-5] #remove path
