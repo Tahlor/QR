@@ -118,11 +118,15 @@ class QRWraper(BaseModel):
                     channel_multiplier=2
                 smaller='smaller' in config['discriminator']
                 if "patch" in config['discriminator'].lower():
+                    receptive_field_mask = "receptive_field" in config['discriminator'].lower()
+                    corner_mask = "corner" in config['discriminator'].lower()
                     self.discriminator = SG2DiscriminatorPatch(256,
                                                                channel_multiplier=channel_multiplier,
                                                                smaller=smaller,
                                                                qr_size=21,
-                                                               padding=2)
+                                                               padding=2,
+                                                               receptive_field=receptive_field_mask,
+                                                               corner_mask=corner_mask)
                 else:
                     mask_corners = 100 if 'mask_corners' in config['discriminator'] else 0
                     self.discriminator=SG2Discriminator(256,
