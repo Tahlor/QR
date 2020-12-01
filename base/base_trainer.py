@@ -65,6 +65,7 @@ class BaseTrainer:
             gen_only_params_slow=[]
             style_ex_only_params=[]
             style_ex_only_slow_params=[]
+            decoder_params=[]
             slow_params=[]
             slow_param_names = config['trainer']['slow_param_names'] if 'slow_param_names' in config['trainer'] else []
             freeze_param_names = config['trainer']['freeze_param_names'] if 'freeze_param_names' in config['trainer'] else []
@@ -82,6 +83,9 @@ class BaseTrainer:
                         if fp in name:
                             freeze=True
                             break
+                    if 'qr_net' in name:
+                        decoder_params.append(param)
+
                     if freeze:
                         pass #simply don't pass them to the optimizer
                     elif 'discriminator' in name:
@@ -113,6 +117,14 @@ class BaseTrainer:
                                                                       **config['optimizer_discriminator'])
             else:
                 self.optimizer_discriminator = None
+            try:
+                if self.curriculum.train_decoder:
+                    to_opt = [{'params': decoder_params}]
+                    self.optimizer_decoder = getattr(optim, config['optimizer_type_decoder'])(to_opt,
+                                                                             **config['optimizer_decoder'])
+            except:
+                pass
+
             if self.curriculum is not None and self.curriculum.need_sep_gen_opt:
                 to_opt = [{'params': gen_only_params}, {'params': gen_only_slow_params, 'lr': config['optimizer']['lr']*0.01}]
                 self.optimizer_gen_only = getattr(optim, config['optimizer_type'])(to_opt,

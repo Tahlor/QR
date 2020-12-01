@@ -1,5 +1,5 @@
 {
-    "name":"cf_taylor_style_gan2_art",
+    "name":"cf_taylor_style_gan2_PATCH_art",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -20,7 +20,7 @@
         },
         "data_dir":"../data/abstract_art",
         "shuffle":true,
-        "batch_size":32,
+        "batch_size":16,
         "num_workers":2
     },
     "validation":{
@@ -199,6 +199,6 @@
         "arch":"QRWraper",
         "style_dim":512,
         "generator":"StyleGAN2 small coordconv",
-        "discriminator":"StyleGAN2 smaller"
+        "discriminator":"StyleGAN2 smaller patch"
     }
 }

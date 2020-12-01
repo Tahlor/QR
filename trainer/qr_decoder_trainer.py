@@ -182,21 +182,22 @@ class QRDecoderTrainer(BaseTrainer):
         char_indexes = outchars.argmax(dim=2)
         b_cer=0
         for b in range(batch_size):
-            s=''
-            for p in range(outchars.size(1)):
-                if char_indexes[b,p].item()>0: #skip the null character
-                    s+=self.data_loader.dataset.index_to_char[char_indexes[b,p].item()]
-                #else:
-                #    s+='N'
-            chars.append(s)
-            
-            b_cer += cer(s,gt_chars[b])
+            if targetvalid[b]:
+                s=''
+                for p in range(outchars.size(1)):
+                    if char_indexes[b,p].item()>0: #skip the null character
+                        s+=self.data_loader.dataset.index_to_char[char_indexes[b,p].item()]
+                    #else:
+                    #    s+='N'
+                chars.append(s)
+                
+                b_cer += cer(s,gt_chars[b])
             
         acc = torch.logical_and(outvalid>0,targetvalid>0).float().mean().item()
         print('GT:{} Pred:{}'.format(gt_chars[0],chars[0]))
         #import pdb;pdb.set_trace()
         log={
-                'cer':b_cer/batch_size,
+                'cer':b_cer/targetvalid.sum().item(),
                 'valid_acc':acc
                 }
                 

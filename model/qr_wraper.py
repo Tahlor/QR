@@ -13,7 +13,7 @@ from .decoder_cnn import DecoderCNN
 from skimage import draw
 from scipy.ndimage.morphology import distance_transform_edt
 from .style_gan import GrowGen, GrowDisc
-from .style_gan2 import SG2Generator, SG2Discriminator
+from .style_gan2 import SG2Generator, SG2Discriminator, SG2DiscriminatorPatch
 from .grow_gen_u import GrowGenU
 from .style_gan2_u_gen import SG2UGen
 
@@ -56,6 +56,11 @@ class QRWraper(BaseModel):
                 qr_config['arch'] = 'DecoderCNN'
             self.qr_net = eval(qr_config['arch'])(qr_config)
             self.qr_net.load_state_dict( qr_state_dict )
+        elif 'qr_net' in config:
+            qr_config = config['qr_net']
+            if 'arch' not in qr_config:
+                qr_config['arch'] = 'DecoderCNN'
+            self.qr_net = eval(qr_config['arch'])(qr_config)
         else:
             self.qr_net = None
 
@@ -112,7 +117,21 @@ class QRWraper(BaseModel):
                 else:
                     channel_multiplier=2
                 smaller='smaller' in config['discriminator']
-                self.discriminator=SG2Discriminator(256,channel_multiplier=channel_multiplier,smaller=smaller)
+                if "patch" in config['discriminator'].lower():
+                    receptive_field_mask = "receptive_field" in config['discriminator'].lower()
+                    corner_mask = "corner" in config['discriminator'].lower()
+                    self.discriminator = SG2DiscriminatorPatch(256,
+                                                               channel_multiplier=channel_multiplier,
+                                                               smaller=smaller,
+                                                               qr_size=21,
+                                                               padding=2,
+                                                               receptive_field=receptive_field_mask,
+                                                               corner_mask=corner_mask)
+                else:
+                    mask_corners = 100 if 'mask_corners' in config['discriminator'] else 0
+                    self.discriminator=SG2Discriminator(256,
+                                                        channel_multiplier=channel_multiplier,
+                                                        smaller=smaller,mask_corners=mask_corners)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 

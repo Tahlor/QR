@@ -252,3 +252,59 @@ def elastic_transform(image, alpha=2.5, sigma=.5, random_state=None, spline_orde
         raise Exception("Should have 2 or 3 dimensions")
     return result
 
+def create_QR_corner_mask(img_size, qr_size, padding, threshold=0, bigger=False):
+        assert (qr_size <= 33)
+        # create weight mask
+        mask = torch.FloatTensor(img_size, img_size).zero_()
+
+        cell_size = img_size / (qr_size + 2 * padding)
+        # mask achors (with padding)
+        top_left_left_x = round((padding - 1) * cell_size)
+        top_left_right_x = round((padding + 7 + 1) * cell_size)
+        top_left_top_y = round((padding - 1) * cell_size)
+        top_left_bot_y = round((padding + 7 + 1) * cell_size)
+        mask[top_left_top_y:top_left_bot_y, top_left_left_x:top_left_right_x] = 1
+
+        top_right_left_x = round((padding + qr_size - 8) * cell_size)
+        top_right_right_x = round((padding + qr_size + 1) * cell_size)
+        top_right_top_y = round((padding - 1) * cell_size)
+        top_right_bot_y = round((padding + 7 + 1) * cell_size)
+        mask[top_right_top_y:top_right_bot_y, top_right_left_x:top_right_right_x] = 1
+
+        bot_left_left_x = round((padding - 1) * cell_size)
+        bot_left_right_x = round((padding + 7 + 1) * cell_size)
+        bot_left_top_y = round((padding + qr_size - 8) * cell_size)
+        bot_left_bot_y = round((padding + qr_size + 1) * cell_size)
+        mask[bot_left_top_y:bot_left_bot_y, bot_left_left_x:bot_left_right_x] = 1
+
+        if qr_size >= 25:
+            bot_right_left_x = round((padding + qr_size - 7 - 2) * cell_size)
+            bot_right_right_x = round((padding + qr_size - 7 + 3) * cell_size)
+            bot_right_top_y = round((padding + qr_size - 7 - 2) * cell_size)
+            bot_right_bot_y = round((padding + qr_size - 7 + 3) * cell_size)
+            mask[bot_right_top_y:bot_right_bot_y, bot_right_left_x:bot_right_right_x] = 1
+
+        mask = mask[None, ...]  # batch dim
+        return mask
+
+def mask_QR_data_squares(mask, img_size, qr_size, padding, bigger):
+        cell_size = img_size / (qr_size + 2 * padding)
+
+        # mask pixel centers. I'll do full at very center and 0.5 around
+        for cell_r in range(qr_size):
+            for cell_c in range(qr_size):
+                center_x = round((cell_c + padding) * cell_size + cell_size / 2)
+                center_y = round((cell_r + padding) * cell_size + cell_size / 2)
+                if mask[center_y, center_x] == 0:  # haven't masked the corner
+                    if bigger:
+                        mask[center_y - 1:center_y + 2, center_x - 2] = 0.25
+                        mask[center_y - 1:center_y + 2, center_x + 3] = 0.25
+                        mask[center_y - 2, center_x - 1:center_x + 2] = 0.25
+                        mask[center_y + 3, center_x - 1:center_x + 2] = 0.25
+                    mask[center_y - 1:center_y + 2, center_x - 1:center_x + 2] = 0.5
+                    mask[center_y, center_x] = 1
+
+if __name__=='__main__':
+    mask = create_QR_corner_mask(256, 21, 2)
+    import matplotlib.pyplot as plt
+    plt.imshow(mask.permute(1,2,0)); plt.show()
