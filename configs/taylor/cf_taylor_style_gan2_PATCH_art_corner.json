@@ -1,5 +1,5 @@
 {
-    "name":"cf_taylor_style_gan2_PATCH_art_corner",
+    "name":"taylor_style_gan2_PATCH_art_corner",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
