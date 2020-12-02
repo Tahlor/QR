@@ -14,8 +14,9 @@ def zbar_decode(img):
     res=pyzbar_decode(img)
 
     if len(res)==0:
-        imgg = img.mean(axis=2)
-        res=pyzbar_decode(imgg)
+        if len(img.shape)>2:
+            imgg = img.mean(axis=2)
+            res=pyzbar_decode(imgg)
         if len(res)==0:
             imgb = gaussian(img,1,preserve_range=True)
             res=pyzbar_decode(imgb)

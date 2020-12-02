@@ -50,6 +50,7 @@ class AdvancedQRDataset2(Dataset):
         self.final_size = config['final_size'] if 'final_size' in config else 256
         self.border = 2 if 'qr_border' not in config else config['qr_border']
         self.mask_pattern =None if 'qr_mask_pattern' not in config else config['qr_mask_pattern']
+        qr_size=22 #version 1
 
         self.max_message_len = config['max_message_len'] if 'max_message_len' in config else 17
         self.min_message_len = config['min_message_len'] if 'min_message_len' in config else 4
@@ -79,7 +80,8 @@ class AdvancedQRDataset2(Dataset):
                                 "distortion":True,
                                 "rotate":False,
                                 "occlude":True,
-                                "background_images":self.images}
+                                "background_images":self.images,
+                                "morphology": 1+math.ceil(self.final_size/(2*self.border+qr_size))}
             #self.occlude = data_utils.Occlude()
         else:
             self.distortions = False
@@ -104,7 +106,8 @@ class AdvancedQRDataset2(Dataset):
                           rotate=True,
                           distortion=True,
                           occlude=True,
-                          background_images=None):
+                          background_images=None,
+                          morphology=10):
         """
 
 
@@ -122,6 +125,18 @@ class AdvancedQRDataset2(Dataset):
         Returns:
 
         """
+        if morphology and np.random.random()>0.05:
+            size = random.randrange(3,morphology)
+            if np.random.random()>0.5:
+                #open
+                image = img_f.morph_erosion(image,size)
+                if np.random.random()>0.4:
+                    image = img_f.morph_dilation(image,size)
+            else:
+                #close
+                image = img_f.morph_dilation(image,size)
+                if np.random.random()>0.4:
+                    image = img_f.morph_erosion(image,size)
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
         if superimpose and background_images and np.random.random()>0.2:#.3:
@@ -140,7 +155,7 @@ class AdvancedQRDataset2(Dataset):
         if distortion and np.random.random()>.4:
             image = data_utils.elastic_transform(image)
 
-        if add_noise and np.random.random()>.4:
+        if add_noise and np.random.random()>.99:
             image = data_utils.gaussian_noise(image)
 
         if blur and np.random.random()>.4:
