@@ -139,6 +139,7 @@ class AdvancedQRDataset2(Dataset):
                     image = img_f.morph_erosion(image,size)
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
+        assert(image.max()>1)
         if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
             image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
@@ -218,6 +219,7 @@ class AdvancedQRDataset2(Dataset):
             gt_char = img_dict['gt_char']
         
         img = torch.from_numpy(img).float().permute(2,0,1)
+        assert(img.max()>1)
         img=img/255
         img = img*2 -1
         img_dict["image"] = img
