@@ -139,7 +139,7 @@ class AdvancedQRDataset2(Dataset):
                     image = img_f.morph_erosion(image,size)
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
-        assert(image.max()>1)
+        assert(image.max()>1 or image.max()==0)
         if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
             image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
