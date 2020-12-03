@@ -4,7 +4,7 @@
     "gpu": 0,
     "save_mode": "state_dict",
     "override": true,
-    "super_computer":true,
+    "super_computer":false,
     "data_loader": {
 	    "data_set_name": "ImageAndQRDataset",
 	    "QR_dataset": {
@@ -15,10 +15,10 @@
 	    },
 	    "image_dataset_name": "simple",
 	    "image_dataset_config": {"size": 256},
-	    "#data_dir": "../data/abstract_art",
-	    "data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
+	    "data_dir": "../data/abstract_art",
+	    "#data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
 	    "shuffle": true,
-	    "batch_size": 28,
+	    "batch_size": 24,
 	    "num_workers": 2
     },
 

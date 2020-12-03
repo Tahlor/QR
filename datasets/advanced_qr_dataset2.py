@@ -126,6 +126,7 @@ class AdvancedQRDataset2(Dataset):
 
         """
         if morphology and np.random.random()>0.05:
+            assert(image.max()>1)
             size = random.randrange(3,morphology)
             if np.random.random()>0.5:
                 #open
