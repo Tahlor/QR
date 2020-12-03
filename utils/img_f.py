@@ -168,7 +168,7 @@ def _morph(b_img,size,tool):
     if two55:
         res=res.astype(np.uint8)*255
     else:
-        res=res.astye(np.float)
+        res=res.astype(np.float)
     if color:
         res=res[:,:,None]
         res=np.repeat(res,colors,2)
