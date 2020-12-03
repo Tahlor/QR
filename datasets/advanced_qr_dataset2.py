@@ -139,6 +139,9 @@ class AdvancedQRDataset2(Dataset):
                     image_n = img_f.morph_erosion(image_n,size)
             if image_n.max()>0: #sometimes it erases the pattern
                 image=image_n
+            if image.max()<=1:
+                print(image)
+                print('image min:{}, max:{}, mean:{}'.format(image.min(), image.max(), image.mean()))
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
         assert(image.max()>1)

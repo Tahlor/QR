@@ -1,0 +1,217 @@
+{
+    "name": "art_scratchDecoder_momNewPix_maskCorners",
+    "cuda": true,
+    "gpu": 0,
+    "save_mode": "state_dict",
+    "override": true,
+    "super_computer":true,
+    "data_loader": {
+	    "data_set_name": "ImageAndQRDataset",
+	    "QR_dataset": {
+		"data_set_name": "SimpleQRDataset",
+		"final_size": 256,
+                "str_len": 17,
+                "alphabet": "url"
+	    },
+	    "image_dataset_name": "simple",
+	    "image_dataset_config": {"size": 256},
+	    "#data_dir": "../data/abstract_art",
+	    "data_dir": "../fsl_groups/fslg_qr/compute/data/abstract_art",
+	    "shuffle": true,
+	    "batch_size": 28,
+	    "num_workers": 2
+    },
+
+    "sample_data_loader": {
+        "cache_dir": "cache/art_scratchDecoder_momPix_maskCorners",
+        "max_saved": 1000,
+        "forget_new_freq": 0.7,
+        "batch_size": 64,
+        "num_workers": 2,
+        "seed_dataset_config": {
+	    "final_size": 256,
+            "alphabet": "url",
+            "max_message_len": 17,
+            "background_image_path":"../data/LSUN",
+            "use_lsun": true,
+            "distortions": true
+        }
+    },
+
+    "validation": {
+        "shuffle": false,
+        "batch_size": 64
+    },
+
+    
+    "lr_scheduler_type": "none",
+ 
+    "optimizer_type": "Adam",
+    "optimizer": {
+        "lr": 0.0016,
+        "betas": [0,0.992]
+    },
+    "optimizer_type_discriminator": "Adam",
+    "optimizer_discriminator": {
+        "lr": 0.00188,
+        "betas": [0,0.991]
+    },
+    "optimizer_type_decoder": "Adam",
+    "optimizer_decoder": {
+        "lr": 0.002,
+        "betas": [0.5,0.999]
+    },
+    "loss": {
+        "char": "cross_entropy",
+        "valid": "sigmoid_BCE_loss",
+        "pixel":"QRCenterPixelLoss"
+    },
+    "loss_weights": {
+	"discriminator": 1.0,
+	"generator": 1.0,
+        "gen_reg": 1.0,
+        "disc_reg": 1.0,
+        "char": 0.5,
+        "valid": 1.0,
+        "pixel": 1.5
+
+    },
+    "loss_params":
+        {
+            "pixel":{
+                "img_size": 256,
+                "qr_size": 21,
+                "padding":2,
+                "threshold":0.1,
+                "bigger": true,
+                "split": true}
+        },
+    "metrics": [],
+    "trainer": {
+        "class": "QRGenTrainer",
+        "iterations": 400000,
+        "save_dir": "saved/",
+        "val_step": 99990000,
+        "save_step": 20000,
+        "save_step_minor": 250,
+        "log_step": 500,
+        "verbosity": 1,
+        "monitor": "loss",
+
+	"freeze_param_names": ["qr_net"],
+        "slow_param_names": ["style_emb"],
+
+        "curriculum": {
+            "0": [     
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["decoder"],
+                        ["gen"],
+                        ["disc"],
+                        ["gen_reg"],
+                        ["disc_reg"]
+                    ]
+        },
+        "balance_loss": "sign_preserve_var",
+        "balance_var_x": {
+            "0":[1.5,"pixel"]
+        },
+        "combine_qr_loss": true,
+
+        "use_learning_schedule": false,
+
+        "print_dir": "train_out/art_scratchDecoder_momPix_maskCorners",
+        "serperate_print_every": 5000,
+        "print_every": 500,
+
+        "ramp_qr_losses": true,
+        "ramp_qr_losses_start": 0,
+        "modulate_pixel_loss": "momentum",
+        "modulate_pixel_loss_start": 10000,
+        "min_pixel_weight": 0.4,
+        "max_pixel_weight": 1.5,
+        "pixel_momentum_B": 0.8
+    },
+    "model": {
+	"arch": "QRWraper", 
+        "style_dim": 512,
+        "generator": "SG2UGen small coordconv unbound",
+        "discriminator": "StyleGAN2 smaller mask_corners",
+        "qr_net": {
+            "arch": "DecoderCNN",
+            "input_size": [
+                256,
+                256
+            ],
+            "cnn_layer_specs": [
+                1,
+                32,
+                "M",
+                "cc-32",
+                "cc-32",
+                "M",
+                "cc-64",
+                "cc-64",
+                "M",
+                "cc-128",
+                "cc-128",
+                "cc-128",
+                "M",
+                "cc-256",
+                "cc-256",
+                "cc-256"
+            ],
+            "fully_connected_specs": [
+                "FC2048",
+                "FC1024"
+            ],
+            "max_message_len": 17,
+            "num_char_class": 85,
+            "input_channels": 1
+        }
+
+
+    }
+}
