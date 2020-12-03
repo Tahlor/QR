@@ -129,17 +129,19 @@ class AdvancedQRDataset2(Dataset):
             size = random.randrange(3,morphology)
             if np.random.random()>0.5:
                 #open
-                image = img_f.morph_erosion(image,size)
+                image_n = img_f.morph_erosion(image,size)
                 if np.random.random()>0.4:
-                    image = img_f.morph_dilation(image,size)
+                    image_n = img_f.morph_dilation(image_n,size)
             else:
                 #close
-                image = img_f.morph_dilation(image,size)
+                image_n = img_f.morph_dilation(image,size)
                 if np.random.random()>0.4:
-                    image = img_f.morph_erosion(image,size)
+                    image_n = img_f.morph_erosion(image_n,size)
+            if image_n.max()>0: #sometimes it erases the pattern
+                image=image_n
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
-        assert(image.max()>1 or image.max()==0)
+        assert(image.max()>1)
         if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
             image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
