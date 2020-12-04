@@ -801,10 +801,10 @@ class QRGenTrainer(BaseTrainer):
                 #if proper_ratio ==1 and self.save_unreadable:
                 #    self.i_cant=True
             log={'proper_QR':proper_ratio}
-            if proper_ratio>0.9 and self.iteration-self.last_good_iteration>50:
+            if proper_ratio>0.9 and self.iteration-self.last_good_iteration>self.save_step_minor:
                 self._save_checkpoint(good='good')
                 self.last_good_iteration = self.iteration
-            elif proper_ratio<=0.9 and proper_ratio>0.5 and self.iteration-self.last_okay_iteration>50:
+            elif proper_ratio<=0.9 and proper_ratio>0.5 and self.iteration-self.last_okay_iteration>self.save_step_minor:
                 self._save_checkpoint(good='okay')
                 self.last_okay_iteration = self.iteration
 

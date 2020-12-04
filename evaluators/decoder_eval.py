@@ -8,6 +8,8 @@ from collections import defaultdict
 from trainer import *
 import utils.img_f as img_f
 
+def AdvancedQRDataset2_eval(config,instance, trainer, metrics, outDir=None, startIndex=None, lossFunc=None, toEval=None):
+    return Decoder_eval(config,instance, trainer, metrics, outDir, startIndex, lossFunc, toEval)
 def Decoder_eval(config,instance, trainer, metrics, outDir=None, startIndex=None, lossFunc=None, toEval=None):
     losses,log,chars = trainer.run(instance)
     images = instance['image'].numpy()
