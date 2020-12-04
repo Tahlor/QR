@@ -687,7 +687,7 @@ class QRGenTrainer(BaseTrainer):
             real.requires_grad = True
             real_pred = self.model.discriminator(real)
             r1_loss = d_r1_loss(real_pred, real)
-            losses['disc_regLoss'] = (self.r1 / 2 * r1_loss * self.curriculum.d_reg_every + 0 * real_pred[0]).mean()
+            losses['disc_regLoss'] = (self.r1 / 2 * r1_loss * self.curriculum.d_reg_every + 0 * real_pred[0]) #.mean()
 
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
