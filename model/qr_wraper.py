@@ -125,7 +125,7 @@ class QRWraper(BaseModel):
                                                                smaller=smaller,
                                                                qr_size=21,
                                                                padding=2,
-                                                               receptive_field=receptive_field_mask,
+                                                               receptive_field_mask=receptive_field_mask,
                                                                corner_mask=corner_mask)
                 else:
                     mask_corners = 100 if 'mask_corners' in config['discriminator'] else 0

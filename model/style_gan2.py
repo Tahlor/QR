@@ -718,7 +718,7 @@ class SG2DiscriminatorPatch(nn.Module):
                  blur_kernel=[1, 3, 3, 1],
                  smaller=False,
                  corner_mask=True,
-                 receptive_field_mask=True,
+                 receptive_field_mask=False,
                  qr_size=21,
                  padding=2,
                  threshold=0,
@@ -819,7 +819,7 @@ class SG2DiscriminatorPatch(nn.Module):
 
         out = out.view(batch, -1)
 
-        return out # B, 8192
+        return out.mean([-1]) # B, 4096
 
 
 import torch
