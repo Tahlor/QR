@@ -718,10 +718,11 @@ class SG2DiscriminatorPatch(nn.Module):
                  blur_kernel=[1, 3, 3, 1],
                  smaller=False,
                  corner_mask=True,
-                 receptive_field_mask=True,
+                 receptive_field_mask=False,
                  qr_size=21,
                  padding=2,
                  threshold=0,
+                 conv_layers=None,
                  *args,
                  **kwargs):
         """
@@ -758,10 +759,14 @@ class SG2DiscriminatorPatch(nn.Module):
         convs = [ConvLayer(3, channels[size], 1)]
 
         log_size = int(math.log(size, 2))
+        if conv_layers is None:
+            conv_layers = log_size // 2
+        else:
+            log_size = conv_layers * 2
 
         in_channel = channels[size]
         output_size = size/2**(log_size // 4)
-        for i in range(log_size // 2, 2, -1):
+        for i in range(conv_layers, 2, -1): # first attempt: 4 layers; no patch: 8 layers
             out_channel = channels[2 ** (i - 1)]
 
             convs.append(ResBlock(in_channel, out_channel, blur_kernel))
@@ -819,7 +824,7 @@ class SG2DiscriminatorPatch(nn.Module):
 
         out = out.view(batch, -1)
 
-        return out # B, 8192
+        return out.mean([-1]) # B, 4096
 
 
 import torch

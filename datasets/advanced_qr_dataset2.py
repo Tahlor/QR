@@ -125,6 +125,8 @@ class AdvancedQRDataset2(Dataset):
         Returns:
 
         """
+        if image.max()<=1:
+            image*=255
         if morphology and np.random.random()>0.05:
             assert(image.max()>1)
             size = random.randrange(3,morphology)
@@ -145,7 +147,7 @@ class AdvancedQRDataset2(Dataset):
                 print('image min:{}, max:{}, mean:{}'.format(image.min(), image.max(), image.mean()))
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
-        assert(image.max()>1)
+        #assert(image.max()>1)
         if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
             image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
@@ -225,7 +227,8 @@ class AdvancedQRDataset2(Dataset):
             gt_char = img_dict['gt_char']
         
         img = torch.from_numpy(img).float().permute(2,0,1)
-        assert(img.max()>1)
+        if img.max()<=1:
+            return self[(idx+1)%len(self)]
         img=img/255
         img = img*2 -1
         img_dict["image"] = img

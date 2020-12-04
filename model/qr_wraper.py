@@ -1,3 +1,4 @@
+import re
 from base import BaseModel
 import numpy as np
 import torch
@@ -120,13 +121,17 @@ class QRWraper(BaseModel):
                 if "patch" in config['discriminator'].lower():
                     receptive_field_mask = "receptive_field" in config['discriminator'].lower()
                     corner_mask = "corner" in config['discriminator'].lower()
+                    conv_layers = re.findall("(layers)([0-9]+)", config['discriminator'].lower())
+                    conv_layers = int(conv_layers[0][1]) if conv_layers else None
+                    print("Conv layers: ", conv_layers)
                     self.discriminator = SG2DiscriminatorPatch(256,
                                                                channel_multiplier=channel_multiplier,
                                                                smaller=smaller,
                                                                qr_size=21,
                                                                padding=2,
-                                                               receptive_field=receptive_field_mask,
-                                                               corner_mask=corner_mask)
+                                                               receptive_field_mask=receptive_field_mask,
+                                                               corner_mask=corner_mask,
+                                                               conv_layers=conv_layers)
                 else:
                     mask_corners = 100 if 'mask_corners' in config['discriminator'] else 0
                     self.discriminator=SG2Discriminator(256,
