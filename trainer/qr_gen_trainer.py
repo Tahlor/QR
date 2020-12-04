@@ -147,6 +147,9 @@ class QRGenTrainer(BaseTrainer):
         self.print_next_gen=False
         self.print_next_auto=False
 
+        self.last_good_iteration= self.start_iteration
+        self.last_okay_iteration= self.start_iteration
+
         #StyleGAN2 parameters
         self.StyleGAN2 = True
         self.path_batch_shrink = 2
@@ -798,6 +801,13 @@ class QRGenTrainer(BaseTrainer):
                 #if proper_ratio ==1 and self.save_unreadable:
                 #    self.i_cant=True
             log={'proper_QR':proper_ratio}
+            if proper_ratio>0.9 and self.iteration-self.last_good_iteration>50:
+                self._save_checkpoint(good='good')
+                self.last_good_iteration = self.iteration
+            elif proper_ratio<=0.9 and proper_ratio>0.5 and self.iteration-self.last_okay_iteration>50:
+                self._save_checkpoint(good='okay')
+                self.last_okay_iteration = self.iteration
+
 
             if self.curriculum.train_decoder and 'eval' not in lesson and 'valid' not in lesson:
                 self.sample_data_loader.dataset.add_gen_sample(gen_image,isvalid,decoded_chars)

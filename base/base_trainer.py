@@ -345,13 +345,13 @@ class BaseTrainer:
 
             #SAVE
             if self.iteration % self.save_step == 0:
-                self._save_checkpoint(self.iteration, log)
+                self._save_checkpoint()
                 if self.iteration%self.log_step!=0:
                     print('                   ', end='\r')
                 #    print()#clear inplace text
                 self.logger.info('Checkpoint saved for iteration '+str(self.iteration))
             elif self.iteration % self.save_step_minor == 0:
-                self._save_checkpoint(self.iteration, log, minor=True)
+                self._save_checkpoint(minor=True)
                 if self.iteration%self.log_step!=0:
                     print('                   ', end='\r')
                 #    print()#clear inplace text
@@ -368,9 +368,9 @@ class BaseTrainer:
         raise NotImplementedError
 
     def save(self):
-        self._save_checkpoint(self.iteration, None)
+        self._save_checkpoint()
 
-    def _save_checkpoint(self, iteration, log, save_best=False, minor=False):
+    def _save_checkpoint(self, save_best=False, minor=False,good=None):
         """
         Saving checkpoints
 
@@ -381,7 +381,7 @@ class BaseTrainer:
         arch = type(self.model).__name__
         state = {
             'arch': arch,
-            'iteration': iteration,
+            'iteration': self.iteration,
             'logger': self.train_logger,
             'optimizer': self.optimizer.state_dict(),
             'monitor_best': self.monitor_best,
@@ -409,8 +409,11 @@ class BaseTrainer:
         #    state['swa_n']=self.swa_n
         torch.cuda.empty_cache() #weird gpu memory issue when calling torch.save()
         if not minor:
-            filename = os.path.join(self.checkpoint_dir, 'checkpoint-iteration{}.pth'
-                                    .format(iteration))
+            if good is None:
+                filename = os.path.join(self.checkpoint_dir, 'checkpoint-iteration{}.pth'
+                                        .format(self.iteration))
+            else:
+                filename = os.path.join(self.checkpoint_dir, 'checkpoint-{}.pth'.format(good))
         else:
             filename = os.path.join(self.checkpoint_dir, 'checkpoint-latest.pth')
                             
@@ -427,7 +430,7 @@ class BaseTrainer:
             torch.save(state, filename_late) #something is wrong with thel inkgin
 
             if self.alt_save is not None:
-                torch.save(state, os.path.join(self.alt_save,'checkpoint-iteration{}.pth'.format(iteration)))
+                torch.save(state, os.path.join(self.alt_save,'checkpoint-iteration{}.pth'.format(self.iteration)))
 
         if save_best:
             os.rename(filename, os.path.join(self.checkpoint_dir, 'model_best.pth'))
