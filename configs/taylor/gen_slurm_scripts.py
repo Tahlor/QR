@@ -16,8 +16,14 @@ ROOT = get_root()
 ENV = "/zgrouphome/fslg_qr/env/qr"
 OUTPUT_PATH = "./slurm"
 
+<<<<<<< HEAD
 def create_script(config_path, outpath=OUTPUT_PATH):
     Path(OUTPUT_PATH).mkdir(parents=True, exist_ok=True)
+=======
+
+def create_script(config_path, outpath=OUTPUT_PATH):
+    Path(OUTPUT).mkdir(parents=True, exist_ok=True)
+>>>>>>> 6fd2ac14a36ed36d66edafa0db6e8c399069f87d
     config_name = config_path.stem.replace("___","").replace("cf_","")
     checkpoint = ROOT / Path(f"saved/{config_name}/checkpoint-latest.pth")
     if checkpoint.exists():
