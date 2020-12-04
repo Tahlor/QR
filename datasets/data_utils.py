@@ -78,7 +78,7 @@ def make_config_consistent(config):
         config.model.max_message_len != config.data_loader.max_message_len):
         config.model.max_message_len = config.data_loader.max_message_len = m = max(config.model.max_message_len, config.data_loader.max_message_len)
         warnings.warn(f"inconsistent max_message_len, using {m}")
-        
+
     if "num_char_class" in config.model and config.model.num_char_class != alphabet_length:
         warnings.warn(f"num_char_class incorrect, using {alphabet_length}")
         config.model.num_char_class = alphabet_length

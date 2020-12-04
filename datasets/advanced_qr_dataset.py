@@ -56,7 +56,7 @@ class AdvancedQRDataset(Dataset):
         error_levels = {"l":1, "m":0, "q":3, "h":2} # L < M < Q < H
 
         self.error_level = error_levels[config["error_level"]]
-
+        print("Error level", config["error_level"], self.error_level)
 
         self.max_message_len = config.max_message_len
         if "background_image_path" in config:
@@ -184,7 +184,7 @@ class AdvancedQRDataset(Dataset):
         #print(np.array(img).shape)
         img = np.array(img).astype(np.uint8) * 255
 
-        targetchar = torch.LongTensor(17).fill_(0)
+        targetchar = torch.LongTensor(self.max_message_len).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]
         targetvalid = torch.FloatTensor([1])
@@ -351,7 +351,7 @@ class AdvancedQRDataset2(AdvancedQRDataset):
         #print(np.array(img).shape)
         img = np.array(img).astype(np.uint8) * 255
 
-        targetchar = torch.LongTensor(17).fill_(0)
+        targetchar = torch.LongTensor(self.max_message_len).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]
         targetvalid = torch.FloatTensor([1])
