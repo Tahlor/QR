@@ -12,7 +12,6 @@
         "shuffle":true,
         "num_workers":5,
         "alphabet_description":"digits",
-        "max_message_len":17,
         "image_size":[
             224,
             224
@@ -25,7 +24,7 @@
         "background_image_path":"./imagenet/images",
         "alphabet":"0123456789abcdefghijklmnopqrstuvwxyz",
         "error_level": "h",
-        "max_message_length":35,
+        "max_message_len":35,
         "input_size":[
             128,
             128
