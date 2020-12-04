@@ -50,6 +50,7 @@ class AdvancedQRDataset2(Dataset):
         self.final_size = config['final_size'] if 'final_size' in config else 256
         self.border = 2 if 'qr_border' not in config else config['qr_border']
         self.mask_pattern =None if 'qr_mask_pattern' not in config else config['qr_mask_pattern']
+        qr_size=22 #version 1
 
         self.max_message_len = config['max_message_len'] if 'max_message_len' in config else 17
         self.min_message_len = config['min_message_len'] if 'min_message_len' in config else 4
@@ -79,7 +80,8 @@ class AdvancedQRDataset2(Dataset):
                                 "distortion":True,
                                 "rotate":False,
                                 "occlude":True,
-                                "background_images":self.images}
+                                "background_images":self.images,
+                                "morphology": 1+math.ceil(self.final_size/(2*self.border+qr_size))}
             #self.occlude = data_utils.Occlude()
         else:
             self.distortions = False
@@ -104,7 +106,8 @@ class AdvancedQRDataset2(Dataset):
                           rotate=True,
                           distortion=True,
                           occlude=True,
-                          background_images=None):
+                          background_images=None,
+                          morphology=10):
         """
 
 
@@ -122,8 +125,27 @@ class AdvancedQRDataset2(Dataset):
         Returns:
 
         """
+        if morphology and np.random.random()>0.05:
+            assert(image.max()>1)
+            size = random.randrange(3,morphology)
+            if np.random.random()>0.5:
+                #open
+                image_n = img_f.morph_erosion(image,size)
+                if np.random.random()>0.4:
+                    image_n = img_f.morph_dilation(image_n,size)
+            else:
+                #close
+                image_n = img_f.morph_dilation(image,size)
+                if np.random.random()>0.4:
+                    image_n = img_f.morph_erosion(image_n,size)
+            if image_n.max()>0: #sometimes it erases the pattern
+                image=image_n
+            if image.max()<=1:
+                print(image)
+                print('image min:{}, max:{}, mean:{}'.format(image.min(), image.max(), image.mean()))
         # if image.ndim != 3:
         #     image = image[:, :, np.newaxis]
+        assert(image.max()>1)
         if superimpose and background_images and np.random.random()>0.2:#.3:
             background_image = AdvancedQRDataset2.get_random_image(background_images)
             image = img_f.superimposeImages(image, background_image) #[:,:,np.newaxis]
@@ -140,7 +162,7 @@ class AdvancedQRDataset2(Dataset):
         if distortion and np.random.random()>.4:
             image = data_utils.elastic_transform(image)
 
-        if add_noise and np.random.random()>.4:
+        if add_noise and np.random.random()>.99:
             image = data_utils.gaussian_noise(image)
 
         if blur and np.random.random()>.4:
@@ -203,6 +225,7 @@ class AdvancedQRDataset2(Dataset):
             gt_char = img_dict['gt_char']
         
         img = torch.from_numpy(img).float().permute(2,0,1)
+        assert(img.max()>1)
         img=img/255
         img = img*2 -1
         img_dict["image"] = img

@@ -122,6 +122,58 @@ def otsuThreshold(img):
     t = filters.threshold_otsu(img)
     return  t,(img>t)*255
 
+def morph_open(b_img,size=None):
+    return _morph(b_img,size,'open')
+def morph_close(b_img,size=None):
+    return _morph(b_img,size,'close')
+def morph_dilation(b_img,size=None):
+    return _morph(b_img,size,'dilation')
+def morph_erosion(b_img,size=None):
+    return _morph(b_img,size,'erosion')
+def _morph(b_img,size,tool):
+    two55=False
+    color = len(b_img.shape)>2
+    if color:
+        colors=b_img.shape[2]
+        b_img = b_img[:,:,0]
+    if b_img.max()>1:
+        b_img = b_img.astype(np.float)/255
+        two55=True
+    b_img = 1-b_img
+    if size is None:
+        if tool=='dilation':
+            res= skimage.morphology.binary_dilation(b_img)
+        elif tool=='erosion':
+            res= skimage.morphology.binary_erosion(b_img)
+        elif tool=='close':
+            res= skimage.morphology.binary_closing(b_img)
+        else:
+            res= skimage.morphology.binary_opening(b_img)
+    else:
+        #ele = np.ones([size,size],dtype=bool)
+        #ele[0,0]=0
+        #ele[-1,0]=0
+        #ele[0,-1]=0
+        #ele[-1,-1]=0
+        ele = np.random.rand(size,size)<0.4
+        if tool=='dilation':
+            res= skimage.morphology.binary_dilation(b_img,ele)
+        elif tool=='erosion':
+            res= skimage.morphology.binary_erosion(b_img,ele)
+        elif tool=='close':
+            res= skimage.morphology.binary_closing(b_img,ele)
+        else:
+            res= skimage.morphology.binary_opening(b_img,ele)
+    res = 1-res
+    if two55:
+        res=res.astype(np.uint8)*255
+    else:
+        res=res.astype(np.float)
+    if color:
+        res=res[:,:,None]
+        res=np.repeat(res,colors,2)
+    return res
+
 def rgb2hsv(img):
     return skimage.color.rgb2hsv(img)
 def hsv2rgb(img):

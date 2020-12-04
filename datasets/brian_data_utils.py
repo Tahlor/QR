@@ -64,7 +64,7 @@ def blur(img, max_intensity=1.5):
     max_intensity = np.random.uniform(0, max_intensity)
     return ndimage.gaussian_filter(img, max_intensity)
 
-def gaussian_noise(img, max_intensity=10, logger=None):
+def gaussian_noise(img, max_intensity=5, logger=None):
     """
         Expects images on 0-255 scale
         max_intensity: .1 - light haze, 1 heavy

@@ -1,5 +1,5 @@
 {
-    "name": "preArt_trainDecoder_momNewPix_maskCorners",
+    "name": "preArtCorFade_trainDecoder_momNewPix_maskCorners",
     "cuda": true,
     "gpu": 0,
     "save_mode": "state_dict",
@@ -23,7 +23,7 @@
     },
 
     "sample_data_loader": {
-        "cache_dir": "cache/preArt_trainDecoder_momNewPix_maskCorners",
+        "cache_dir": "cache/preArtCorFade_trainDecoder_momNewPix_maskCorners",
         "max_saved": 1000,
         "forget_new_freq": 0.7,
         "batch_size": 64,
@@ -164,14 +164,14 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/preArt_trainDecoder_momNewPix_maskCorners",
+        "print_dir": "train_out/preArtCorFade_trainDecoder_momNewPix_maskCorners",
         "serperate_print_every": 5000,
         "print_every": 500,
 
         "ramp_qr_losses": true,
-        "ramp_qr_losses_start": 80000,
+        "ramp_qr_losses_start": 160000,
         "modulate_pixel_loss": "momentum",
-        "modulate_pixel_loss_start": 120000,
+        "modulate_pixel_loss_start": 180000,
         "min_pixel_weight": 0.2,
         "max_pixel_weight": 1.5,
         "pixel_momentum_B": 0.8

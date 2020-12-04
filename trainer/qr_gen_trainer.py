@@ -182,6 +182,8 @@ class QRGenTrainer(BaseTrainer):
 
         self.combine_qr_loss = False if 'combine_qr_loss' not in config['trainer'] else config['trainer']['combine_qr_loss']
 
+        self.hack_gen_loss_cap = config['trainer']['hack_gen_loss_cap'] if 'hack_gen_loss_cap' in config['trainer'] else None
+
 
     def _to_tensor(self, data):
         if self.with_cuda:
@@ -764,6 +766,10 @@ class QRGenTrainer(BaseTrainer):
                             predicted_disc.append(gp.detach().cpu())
                 gen_loss/=len(gen_pred)
                 losses['generatorLoss']=gen_loss
+
+            if self.hack_gen_loss_cap is not None:
+                if losses['generatorLoss'] > self.hack_gen_loss_cap:
+                    losses['generatorLoss'] *= self.hack_gen_loss_cap/losses['generatorLoss'].detach()
         else:
             predicted_disc=None
 
