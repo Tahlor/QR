@@ -193,7 +193,7 @@ class QRDecoderTrainer(BaseTrainer):
                 
                 b_cer += cer(s,gt_chars[b])
             
-        acc = torch.logical_and(outvalid>0,targetvalid>0).float().mean().item()
+        acc = (outvalid>0 == targetvalid>0).float().mean().item()
         #print('GT:{} Pred:{}'.format(gt_chars[0],chars[0]))
         #import pdb;pdb.set_trace()
         log={
