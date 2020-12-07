@@ -47,10 +47,10 @@
     "metrics": [],
     "trainer": {
         "class": "QRDecoderTrainer",
-        "iterations": 100000,
+        "iterations": 300000,
         "save_dir": "saved/",
-        "val_step": 10000,
-        "save_step": 10000,
+        "val_step": 100000,
+        "save_step": 25000,
         "save_step_minor": 250,
         "log_step": 250,
         "verbosity": 1,
