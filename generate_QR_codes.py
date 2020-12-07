@@ -79,15 +79,17 @@ def main(resume,saveDir,numberOfImages,message,qr_size,qr_border,qr_version,gpu=
     if checkpoint is not None:
         if 'state_dict' in checkpoint:
             model = eval(config['model']['arch'])(config['model'])
-            if config['trainer']['class']=='HWRWithSynthTrainer':
-                model = model.hwr
-            if 'style' in config['model'] and 'lookup' in config['model']['style']:
-                model.style_extractor.add_authors(data_loader.dataset.authors) ##HERE
-            ##HACK fix
             keys = list(checkpoint['state_dict'].keys())
-            for key in keys:
-                if 'style_from_normal' in key: #HACK
-                    del checkpoint['state_dict'][key]
+            my_state = model.state_dict()
+            my_keys = list(my_state.keys())
+            for mkey in my_keys:
+                if mkey not in keys:
+                    checkpoint['state_dict'][mkey]=my_state[mkey]
+                #else:
+                #    print('{} me: {}, load: {}'.format(mkey,my_state[mkey].size(),checkpoint['state_dict'][mkey].size()))
+            for ckey in keys:
+                if ckey not in my_keys:
+                    del checkpoint['state_dict'][ckey]
             model.load_state_dict(checkpoint['state_dict'])
         else:
             model = checkpoint['model']

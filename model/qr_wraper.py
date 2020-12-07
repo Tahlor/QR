@@ -133,10 +133,15 @@ class QRWraper(BaseModel):
                                                                corner_mask=corner_mask,
                                                                conv_layers=conv_layers)
                 else:
-                    mask_corners = 100 if 'mask_corners' in config['discriminator'] else 0
+                    mask_corners = config['discriminator'] if 'mask_corners' in config['discriminator'] else False
+                    qr_size = config['qr_size'] if 'qr_size' in config else 21
+                    qr_padding = config['qr_padding'] if 'qr_padding' in config else 2
                     self.discriminator=SG2Discriminator(256,
                                                         channel_multiplier=channel_multiplier,
-                                                        smaller=smaller,mask_corners=mask_corners)
+                                                        smaller=smaller,
+                                                        mask_corners=mask_corners,
+                                                        qr_size=qr_size,
+                                                        qr_padding=qr_padding)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 

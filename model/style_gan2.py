@@ -632,7 +632,7 @@ class ResBlock(nn.Module):
 
 class SG2Discriminator(nn.Module):
     def __init__(self, size, channel_multiplier=2, blur_kernel=[1, 3, 3, 1], smaller=False,
-                 mask_corners=0,
+                 mask_corners=True,qr_size=21,padding=2,
                  *args,
                  **kwargs):
         super().__init__()
@@ -649,11 +649,39 @@ class SG2Discriminator(nn.Module):
         }
 
         self.mask_corners=mask_corners
-        if mask_corners>0:
+        if mask_corners:
+            cell_size = 256/(qr_size+2*padding)
             self.corner_mask = torch.FloatTensor(256,256).fill_(1)
+
             self.corner_mask[0:self.mask_corners,0:self.mask_corners]*=0
             self.corner_mask[-self.mask_corners:,0:self.mask_corners]*=0
             self.corner_mask[0:self.mask_corners,-self.mask_corners:]*=0
+
+            top_left_left_x = round((padding-1)*cell_size)
+            top_left_right_x = round((padding+7+1)*cell_size)
+            top_left_top_y = round((padding-1)*cell_size)
+            top_left_bot_y = round((padding+7+1)*cell_size)
+            self.corner_mask[top_left_top_y:top_left_bot_y,top_left_left_x:top_left_right_x]*=0
+
+            top_right_left_x = round((padding+qr_size-8)*cell_size)
+            top_right_right_x = round((padding+qr_size+1)*cell_size)
+            top_right_top_y = round((padding-1)*cell_size)
+            top_right_bot_y = round((padding+7+1)*cell_size)
+            self.corner_mask[top_right_top_y:top_right_bot_y,top_right_left_x:top_right_right_x]*=0
+
+            bot_left_left_x = round((padding-1)*cell_size)
+            bot_left_right_x = round((padding+7+1)*cell_size)
+            bot_left_top_y = round((padding+qr_size-8)*cell_size)
+            bot_left_bot_y = round((padding+qr_size+1)*cell_size)
+            self.corner_mask[bot_left_top_y:bot_left_bot_y,bot_left_left_x:bot_left_right_x]*=0
+
+            if qr_size>=25:#bottom right anchor only exists in larged qr codes
+                bot_right_left_x = round((padding+qr_size-7 -2)*cell_size)
+                bot_right_right_x = round((padding+qr_size-7 +3)*cell_size)
+                bot_right_top_y = round((padding+qr_size-7 -2)*cell_size)
+                bot_right_bot_y = round((padding+qr_size-7 +3)*cell_size)
+                self.corner_mask[bot_right_top_y:bot_right_bot_y,bot_right_left_x:bot_right_right_x]*=0
+
             self.corner_mask = self.corner_mask[None,None,...] #add batch and channel dim
 
         # 3 -> 32 channels
@@ -682,11 +710,8 @@ class SG2Discriminator(nn.Module):
         )
 
     def forward(self, input,_=False):
-        if self.mask_corners>0:
+        if self.mask_corners:
             #mask three corners (which have QR anchors)
-            #input[:,:,0:self.mask_corners,0:self.mask_corners]*=0
-            #input[:,:,-self.mask_corners:,0:self.mask_corners]*=0
-            #input[:,:,0:self.mask_corners,-self.mask_corners:]*=0
             if input.is_cuda and not self.corner_mask.is_cuda:
                 self.corner_mask = self.corner_mask.to(input.device)
             input = input*self.corner_mask
