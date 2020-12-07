@@ -801,6 +801,8 @@ class QRGenTrainer(BaseTrainer):
                 #if proper_ratio ==1 and self.save_unreadable:
                 #    self.i_cant=True
             log={'proper_QR':proper_ratio}
+
+            #If this is generating valid QR codes, we'll save a snapshot before the weight update
             if proper_ratio>0.9 and self.iteration-self.last_good_iteration>self.save_step_minor:
                 self._save_checkpoint(good='good')
                 self.last_good_iteration = self.iteration

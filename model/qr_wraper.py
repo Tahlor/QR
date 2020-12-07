@@ -152,7 +152,7 @@ class QRWraper(BaseModel):
     def forward(self,qr_image,style=None,step=None, alpha=None,return_latent=False):
         batch_size = qr_image.size(0)
         if style is None:
-            style = torch.FloatTensor(batch_size,self.style_dim).normal_().to(qr_image.device)
+            style = [torch.FloatTensor(batch_size,self.style_dim).normal_().to(qr_image.device)]
         if step is not None:
             gen_img = self.generator(qr_image,style,step,alpha)
             return gen_img

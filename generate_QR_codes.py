@@ -13,10 +13,8 @@ from evaluators import *
 import math
 from collections import defaultdict
 import pickle, csv
-
-
-logging.basicConfig(level=logging.INFO, format='')
-
+import qrcode
+from utils import img_f
 
 
 
@@ -77,16 +75,6 @@ def main(resume,saveDir,numberOfImages,message,qr_size,qr_border,qr_version,gpu=
     #config['data_loader']['batch_size']=math.ceil(config['data_loader']['batch_size']/2)
     else:
         vBatchSize = batchSize
-    if not test:
-        data_loader, valid_data_loader = getDataLoader(config,'train')
-    else:
-        valid_data_loader, data_loader = getDataLoader(config,'test')
-
-    if addDATASET:
-        config['DATASET']=valid_data_loader.dataset
-    #ttt=FormsDetect(dirPath='/home/ubuntu/brian/data/forms',split='train',config={'crop_to_page':False,'rescale_range':[450,800],'crop_params':{"crop_size":512},'no_blanks':True, "only_types": ["text_start_gt"], 'cache_resized_images': True})
-    #data_loader = torch.utils.data.DataLoader(ttt, batch_size=16, shuffle=False, num_workers=5, collate_fn=forms_detect.collate)
-    #valid_data_loader = data_loader.split_validation()
 
     if checkpoint is not None:
         if 'state_dict' in checkpoint:
@@ -119,19 +107,19 @@ def main(resume,saveDir,numberOfImages,message,qr_size,qr_border,qr_version,gpu=
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white")
     qr_img = np.array(qr_img)
-    qr_img = qr_img_f.resize(qr_img,(qr_size,qr_size),degree=0)
+    qr_img = img_f.resize(qr_img,(qr_size,qr_size),degree=0)
     if qr_img.max()==255:
         qr_img=qr_img/255
     qr_img = qr_img*2 -1
 
-    qr_img=qr_img[None,None,...] #add batch and color
+    qr_img=torch.from_numpy(qr_img[None,None,...]).float() #add batch and color
     qr_img=qr_img.expand(numberOfImages,-1,-1,-1)
 
 
     with torch.no_grad():
         if gpu is not None:
             qr_img = qr_img.to(gpu)
-        gen_image = self.model(qr_image)
+        gen_image = model(qr_img)
         gen_image = gen_image.clamp(-1,1)
         gen_image = (gen_image+1)/2
         gen_image=gen_image.cpu().permute(0,2,3,1)
