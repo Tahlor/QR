@@ -141,7 +141,7 @@ class QRWraper(BaseModel):
                                                         smaller=smaller,
                                                         mask_corners=mask_corners,
                                                         qr_size=qr_size,
-                                                        qr_padding=qr_padding)
+                                                        padding=qr_padding)
             elif config['discriminator']!='none':
                 raise NotImplementedError('Unknown discriminator: {}'.format(config['discriminator']))
 
