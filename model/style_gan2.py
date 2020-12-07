@@ -653,9 +653,6 @@ class SG2Discriminator(nn.Module):
             cell_size = 256/(qr_size+2*padding)
             self.corner_mask = torch.FloatTensor(256,256).fill_(1)
 
-            self.corner_mask[0:self.mask_corners,0:self.mask_corners]*=0
-            self.corner_mask[-self.mask_corners:,0:self.mask_corners]*=0
-            self.corner_mask[0:self.mask_corners,-self.mask_corners:]*=0
 
             top_left_left_x = round((padding-1)*cell_size)
             top_left_right_x = round((padding+7+1)*cell_size)
