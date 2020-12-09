@@ -614,8 +614,9 @@ class QRGenTrainer(BaseTrainer):
 
         valid_pred,char_pred = self.model.qr_net(images)
         batch_size = images.size(0)
-        losses['charLoss'] = self.loss['char'](char_pred.reshape(batch_size*char_pred.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
-        #assert(losses['charLoss']!=0)
+        if 'char' in self.loss:
+            losses['charLoss'] = self.loss['char'](char_pred.reshape(batch_size*char_pred.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+            #assert(losses['charLoss']!=0)
         #if losses['charLoss']<0.0001:
         #   del losses['charLoss']
         losses['validLoss'] = self.loss['valid'](valid_pred,targetvalid,*self.loss_params['valid'])
@@ -659,10 +660,11 @@ class QRGenTrainer(BaseTrainer):
 
         if 'gen' in lesson and 'char' in self.loss and 'eval' not in lesson and 'skip-qr' not in lesson:
             gen_valid,gen_chars = self.model.qr_net(gen_image)
-            losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
-            #assert(losses['charLoss']!=0)
-            if losses['charLoss']<0.0001:
-                del losses['charLoss']
+            if 'char' in self.loss:
+                losses['charLoss'] = self.loss['char'](gen_chars.reshape(batch_size*gen_chars.size(1),-1),targetchars.view(-1),*self.loss_params['char'])
+                #assert(losses['charLoss']!=0)
+                if losses['charLoss']<0.0001:
+                    del losses['charLoss']
             if 'valid' in self.loss:
                 losses['validLoss'] = self.loss['valid'](gen_valid,targetvalid,*self.loss_params['valid'])
                 if losses['validLoss']<0.0001:
