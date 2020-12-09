@@ -52,7 +52,7 @@ for coord_conv in [False]:
                     config.data_loader.alphabet = string.printable
                     config.data_loader.characters = config.data_loader.alphabet
                     config.data_loader.error_level = "h"
-
+                    config.data_loader.min_length = config.data_loader.QR_dataset.str_len - 2
                     # bigger discriminator / generator
                     config.model.generator = config.model.generator.replace("small","")
                     config.model.discriminator = config.model.discriminator.replace("small", "")

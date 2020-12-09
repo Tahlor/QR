@@ -35,6 +35,8 @@ class SimpleQRDataset(Dataset):
         print(f"QR gen opts: {self.box_size} {self.border} {self.mask_pattern}")
 
         self.final_size = config['final_size'] if 'final_size' in config else None
+        self.min_str_len = max(3,config["min_message_len"]) if 'min_message_len' in config else 4
+
         if "max_message_len" in config:
             config['str_len'] = config["max_message_len"]
         if 'total_random' in config or 'str_len' in config:
@@ -44,6 +46,8 @@ class SimpleQRDataset(Dataset):
                     self.characters = string.digits
                 else:
                     self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
+            else:
+                self.characters = config["characters"]
             self.char_to_index={char:n+1 for n,char in enumerate(self.characters)}
             self.char_to_index['\0']=0 #0 is actually reserved for predicting blank chars
         else:
@@ -79,7 +83,7 @@ class SimpleQRDataset(Dataset):
             mask_pattern=self.mask_pattern,
         )
         if self.str_len is not None:
-            length = random.randrange(4,self.str_len+1)
+            length = random.randrange(self.min_str_len,self.str_len+1)
             gt_char = ''.join(random.choice(self.characters) for i in range(length))
         else:
             if self.indexes is not None:
