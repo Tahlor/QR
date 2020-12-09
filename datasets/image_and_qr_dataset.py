@@ -12,6 +12,9 @@ import torchvision
 
 import utils.img_f as img_f
 from .simple_qr_dataset import SimpleQRDataset
+from .advanced_qr_dataset import AdvancedQRDataset
+from .advanced_qr_dataset3 import AdvancedQRDataset3
+
 from .simple_image_dataset import SimpleImageDataset
 
 def collate(batch):
@@ -30,6 +33,10 @@ class ImageAndQRDataset(Dataset):
         
         if config['QR_dataset']['data_set_name']=='SimpleQRDataset':
             self.qr_dataset = SimpleQRDataset('none',split,config['QR_dataset'])
+        elif config['QR_dataset']['data_set_name']=='AdvancedQRDataset':
+            self.qr_dataset = AdvancedQRDataset('none',split,config['QR_dataset'])
+        elif config['QR_dataset']['data_set_name']=='AdvancedQRDataset3':
+            self.qr_dataset = AdvancedQRDataset3('none',split,config['QR_dataset'])
         else:
             raise NotImplementedError('Unknown QR dataset: {}'.format(config['QR_dataset']['data_set_name']))
 
