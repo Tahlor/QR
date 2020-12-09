@@ -50,6 +50,7 @@ for coord_conv in [False]:
                     config.data_loader.alphabet_description = "printable"
                     config.data_loader.distortions = False
                     config.data_loader.alphabet = string.printable
+                    config.data_loader.characters = config.data_loader.alphabet
                     config.data_loader.error_level = "h"
 
                     # bigger discriminator / generator
