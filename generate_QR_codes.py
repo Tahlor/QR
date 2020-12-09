@@ -96,6 +96,8 @@ def main(resume,saveDir,numberOfImages,message,qr_size,qr_border,qr_version,gpu=
     else:
         model = eval(config['arch'])(config['model'])
     model.eval()
+    if gpu is not None:
+        model = model.to(gpu)
 
     #generate normal QR code
     qr = qrcode.QRCode(
