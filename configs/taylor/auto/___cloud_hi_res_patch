@@ -1,5 +1,5 @@
 {
-    "name":"DEFAULT",
+    "name":"cloud_hi_res_patch",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -8,9 +8,9 @@
     "data_loader":{
         "data_set_name":"ImageAndQRDataset",
         "QR_dataset":{
-            "data_set_name":"SimpleQRDataset",
+            "data_set_name":"AdvancedQRDataset3",
             "final_size":256,
-            "str_len":17,
+            "str_len":58,
             "alphabet":"digits"
         },
         "image_dataset_name":"simple",
@@ -18,13 +18,17 @@
             "size":256
         },
         "#data_dir":"../data/abstract_art",
-        "data_dir":"../fsl_groups/fslg_qr/compute/data/abstract_art",
+        "data_dir":"../data/understanding_cloud_organization",
         "shuffle":true,
         "batch_size":28,
-        "num_workers":2
+        "num_workers":2,
+        "alphabet_description":"printable",
+        "distortions":false,
+        "alphabet":"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\u000b\f",
+        "error_level":"h"
     },
     "sample_data_loader":{
-        "cache_dir":"cache/preArt_trainDecoder_newPix_maskCorners",
+        "cache_dir":"cache/cloud_hi_res_patch",
         "max_saved":1000,
         "forget_new_freq":0.7,
         "batch_size":64,
@@ -57,14 +61,6 @@
         "betas":[
             0,
             0.991
-        ]
-    },
-    "optimizer_type_decoder":"Adam",
-    "optimizer_decoder":{
-        "lr":0.002,
-        "betas":[
-            0.5,
-            0.999
         ]
     },
     "loss":{
@@ -111,18 +107,6 @@
         "curriculum":{
             "0":[
                 [
-                    "decoder"
-                ],
-                [
-                    "gen"
-                ],
-                [
-                    "disc"
-                ],
-                [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
@@ -135,7 +119,10 @@
                     "disc"
                 ],
                 [
-                    "decoder"
+                    "gen"
+                ],
+                [
+                    "disc"
                 ],
                 [
                     "gen"
@@ -153,25 +140,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -189,25 +167,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -225,25 +194,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -270,7 +230,7 @@
         },
         "combine_qr_loss":true,
         "use_learning_schedule":false,
-        "print_dir":"train_out/preArt_trainDecoder_newPix_maskCorners",
+        "print_dir":"train_out/cloud_hi_res_patch",
         "serperate_print_every":5000,
         "print_every":500,
         "ramp_qr_losses":true,
@@ -280,8 +240,8 @@
     "model":{
         "arch":"QRWraper",
         "style_dim":512,
-        "generator":"SG2UGen small coordconv unbound predict_offset",
-        "discriminator":"StyleGAN2 smaller mask_corners",
-        "pretrained_qr":"saved/default_cconv_digits_multimask/checkpoint-latest.pth"
+        "generator":"SG2UGen   unbound ",
+        "discriminator":"StyleGAN2 er mask_corners",
+        "pretrained_qr":null
     }
 }
