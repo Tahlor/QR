@@ -38,7 +38,7 @@ for coord_conv in False:
 
                     # make hi res QR
                     config.data_loader.QR_dataset.str_len = 58
-                    config.data_loader.data_set_name = "AdvancedQRDataset"
+                    config.data_loader.data_set_name = "AdvancedQRDataset3"
                     config.data_loader.alphabet_description = "printable"
                     config.data_loader.distortions = False
                     config.data_loader.alphabet = string.printable
