@@ -32,7 +32,7 @@ for coord_conv in True,False:
                 config.arch = "ResNet"
             config.data_loader.alphabet = alphabet
             config.model.max_message_len = 17
-            config.data_loader.max_message_length = config.model.max_message_len = 17
+            config.data_loader.max_message_len = config.model.max_message_len = 17
 
             # Make configs consistent
             config.data_loader.input_size = config.model.input_size

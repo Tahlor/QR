@@ -26,19 +26,24 @@ def collate(batch):
 class SimpleQRDataset(Dataset):
     def __init__(self, dirPath,split,config):
 
+        error_levels = {"l": 1, "m": 0, "q": 3, "h": 2}  # L < M < Q < H
+        self.error_level = error_levels[config["error_level"]] if "error_level" in config else qrcode.constants.ERROR_CORRECT_L
+
         self.box_size = config["box_size"] if "box_size" in config else 1 # 6 in initial training
         self.border = config["border"] if "border" in config else 2 # 1 in initial training
         self.mask_pattern = config["mask_pattern"] if "mask_pattern" in config else None # 1 in initial training
         print(f"QR gen opts: {self.box_size} {self.border} {self.mask_pattern}")
 
         self.final_size = config['final_size'] if 'final_size' in config else None
-        
+        if "max_message_len" in config:
+            config['str_len'] = config["max_message_len"]
         if 'total_random' in config or 'str_len' in config:
             self.str_len = config['total_random'] if 'total_random' in config else config['str_len']
-            if 'alphabet' in config and config['alphabet']=='digits':
-                self.characters = string.digits
-            else:
-                self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
+            if "characters" not in config:
+                if 'alphabet' in config and config['alphabet']=='digits':
+                    self.characters = string.digits
+                else:
+                    self.characters = string.ascii_letters + string.digits + "-._~:/?#[]@!$&'()*+,;%" #url characters
             self.char_to_index={char:n+1 for n,char in enumerate(self.characters)}
             self.char_to_index['\0']=0 #0 is actually reserved for predicting blank chars
         else:
@@ -68,7 +73,7 @@ class SimpleQRDataset(Dataset):
 
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            error_correction=self.error_level,
             box_size=self.box_size,
             border=self.border,
             mask_pattern=self.mask_pattern,
