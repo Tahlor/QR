@@ -9,7 +9,12 @@ def get_root():
     for par in file_dir.parents:
         if par.parent.name =="fslg_qr":
             return par
-    warnings.warn("Couldn't find parent")
+        elif par.stem.lower()[:2]=="qr":
+            return par
+    #warnings.warn("Couldn't find parent")
+    print(file_dir)
+    raise Exception("Couldn't find parent")
+
     return "."
 
 ROOT = get_root()
@@ -70,10 +75,13 @@ def check_config(path):
         locals().update(globals())
         json.dump(config.__dict__, path.open("w"), indent=4, separators=(',', ':'))
 
-def run_it():
-    for f in Path(".").glob("*.json"):
+def run_it(path="."):
+    print("Parsing ", path)
+    output = Path(path) / "slurm"
+    output.mkdir(parents=True, exist_ok=True)
+    for f in Path(path).glob("*.json"):
         check_config(f)
-        create_script(f)
+        create_script(f, outpath=output)
 
 if __name__=='__main__':
     run_it()

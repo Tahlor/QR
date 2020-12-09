@@ -1,3 +1,4 @@
+import warnings
 import os
 import json
 import string
@@ -9,6 +10,9 @@ import gen_slurm_scripts
 # configs/brian/cf_preArt_trainDecoder_newPix_maskCorners.json
 
 from time import sleep
+
+ROOT = gen_slurm_scripts.get_root()
+
 
 out = Path("./auto/")
 out.mkdir(parents=True, exist_ok=True)
@@ -25,7 +29,7 @@ datasets = {"art":"../data/abstract_art",
 
 for coord_conv in [False]:
     for hi_res in [True, False]:
-        for patch_type in "patch", "patch layers6":
+        for patch_type in "patch", "patch_layers6":
             for dataset in datasets.keys():
                 config = deepcopy(config_prime)
 
@@ -56,24 +60,23 @@ for coord_conv in [False]:
                     del config.loss.valid
                     for i,item in reversed(list(enumerate(config.trainer.curriculum["0"]))):
                         if item[0] == "decoder":
-                            #print(item)
                             x = config.trainer.curriculum["0"].pop(i)
-                            print(x)
+                            #print(x)
 
-                    #input()
                     del config.optimizer_type_decoder
                     del config.optimizer_decoder
 
                 hi_res = "hi_res" if hi_res else "low_res"
                 name = f"{dataset}_{hi_res}_{patch_type}"
 
-                config.trainer.print_dir = f"train_out/{name}"
-                config.sample_data_loader.cache_dir = f"cache/{name}"
+                config.trainer.print_dir = str(ROOT / f"train_out/{name}")
+                config.sample_data_loader.cache_dir = str(ROOT / f"cache/{name}")
+
                 Path(config.trainer.print_dir).mkdir(parents=True, exist_ok=True)
                 Path(config.sample_data_loader.cache_dir).mkdir(parents=True, exist_ok=True)
 
                 config.name = Path(name).stem
-                json.dump(config.__dict__,(out / f"___{name}").open("w"), indent=4, separators=(',', ':'))
+                json.dump(config.__dict__,(out / f"___{name}.json").open("w"), indent=4, separators=(',', ':'))
                 #os.chmod(out / f"___{name}", 755)
 
-gen_slurm_scripts.run_it()
+gen_slurm_scripts.run_it(out)

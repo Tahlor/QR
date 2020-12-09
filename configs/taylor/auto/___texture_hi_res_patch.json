@@ -1,5 +1,5 @@
 {
-    "name":"water_hi_res_patch",
+    "name":"texture_hi_res_patch",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -18,7 +18,7 @@
             "size":256
         },
         "#data_dir":"../data/abstract_art",
-        "data_dir":"../data/water",
+        "data_dir":"../data/texture",
         "shuffle":true,
         "batch_size":28,
         "num_workers":2,
@@ -28,7 +28,7 @@
         "error_level":"h"
     },
     "sample_data_loader":{
-        "cache_dir":"cache/water_hi_res_patch",
+        "cache_dir":"/media/data/GitHub/qr2/cache/texture_hi_res_patch",
         "max_saved":1000,
         "forget_new_freq":0.7,
         "batch_size":64,
@@ -230,7 +230,7 @@
         },
         "combine_qr_loss":true,
         "use_learning_schedule":false,
-        "print_dir":"train_out/water_hi_res_patch",
+        "print_dir":"/media/data/GitHub/qr2/train_out/texture_hi_res_patch",
         "serperate_print_every":5000,
         "print_every":500,
         "ramp_qr_losses":true,
