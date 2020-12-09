@@ -4,7 +4,10 @@ import os
 from pathlib import Path
 from scipy import ndimage
 import numpy as np
-import cv2
+try:
+    import cv2
+except:
+    pass
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
 import torch

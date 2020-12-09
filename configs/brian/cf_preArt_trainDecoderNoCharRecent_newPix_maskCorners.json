@@ -23,7 +23,7 @@
     },
 
     "sample_data_loader": {
-        "cache_dir": "cache/preArt_trainDecoderRecent_momNewPix_maskCorners",
+        "cache_dir": "cache/preArt_trainDecoderNoCharRecent_newPix_maskCorners",
         "max_saved": 500,
         "forget_new_freq": 0.01,
         "batch_size": 64,
@@ -160,7 +160,7 @@
 
         "use_learning_schedule": false,
 
-        "print_dir": "train_out/preArt_trainDecoderRecent_momNewPix_maskCorners",
+        "print_dir": "train_out/preArt_trainDecoderNoCharRecent_newPix_maskCorners",
         "serperate_print_every": 5000,
         "print_every": 500,
 

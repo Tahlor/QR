@@ -1,7 +1,10 @@
 from time import sleep
 import json
 from easydict import EasyDict as edict
-import cv2
+try:
+    import cv2
+except:
+    pass
 import string
 import torch
 from torch.utils.data import Dataset
