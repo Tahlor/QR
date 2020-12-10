@@ -11,6 +11,10 @@ import math, random
 import qrcode
 import utils.img_f as img_f
 
+import sys
+sys.path.append("./model")
+import qr_center_pixel_loss
+
 import random, string
 PADDING_CONSTANT = -1
 
@@ -20,15 +24,22 @@ def collate(batch):
             'gt_char': [b['gt_char'] for b in batch],
             'targetchar': torch.stack([b['targetchar'] for b in batch],dim=0),
             'targetvalid': torch.cat([b['targetvalid'] for b in batch],dim=0)
+            # ,'masked_image': torch.stack([b['masked_img'] for b in batch], dim=0)
+
             }
-            
+
 
 class SimpleQRDataset(Dataset):
     def __init__(self, dirPath,split,config):
 
+        if "mask" in config and config["mask"]:
+            qr = qr_center_pixel_loss.QRCenterPixelLoss(256, 33, 2, 0.1, bigger=True, split=False, factor=1, no_corners=False)
+            self.mask = qr.get_mask(numpy=False)
+        else:
+            self.mask = None
+
         error_levels = {"l": 1, "m": 0, "q": 3, "h": 2}  # L < M < Q < H
         self.error_level = error_levels[config["error_level"]] if "error_level" in config else qrcode.constants.ERROR_CORRECT_L
-
         self.box_size = config["box_size"] if "box_size" in config else 1 # 6 in initial training
         self.border = config["border"] if "border" in config else 2 # 1 in initial training
         self.mask_pattern = config["mask_pattern"] if "mask_pattern" in config else None # 1 in initial training
@@ -39,6 +50,7 @@ class SimpleQRDataset(Dataset):
 
         if "max_message_len" in config:
             config['str_len'] = config["max_message_len"]
+
         if 'total_random' in config or 'str_len' in config:
             self.str_len = config['total_random'] if 'total_random' in config else config['str_len']
             if "characters" not in config:
@@ -83,7 +95,8 @@ class SimpleQRDataset(Dataset):
             mask_pattern=self.mask_pattern,
         )
         if self.str_len is not None:
-            length = random.randrange(self.min_str_len,self.str_len+1)
+            #length = random.randrange(self.min_str_len,self.str_len+1)
+            length = self.str_len
             gt_char = ''.join(random.choice(self.characters) for i in range(length))
         else:
             if self.indexes is not None:
@@ -96,18 +109,30 @@ class SimpleQRDataset(Dataset):
         if self.final_size is not None:
             img = img_f.resize(img,(self.final_size,self.final_size),degree=0)
         img = torch.from_numpy(img)[None,...].float()
-        if img.max()==255:
+        if img.max() == 255:
             img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
-        img = img*2 -1
+        img = img * 2 - 1
 
         targetchar = torch.LongTensor(self.str_len).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]
         targetvalid = torch.FloatTensor([1])
 
+        if not self.mask is None:
+            img = masked_img = self.mask * img
+        else:
+            masked_img = img
+            # x = img.squeeze().detach().numpy()
+            # import matplotlib.pyplot as plt
+            # plt.imshow((x+1)*127.5, cmap="gray");plt.show()
+
         return {
             "image": img,
             "gt_char": gt_char,
             'targetchar': targetchar,
-            'targetvalid': targetvalid
+            'targetvalid': targetvalid,
+            "masked_img": masked_img
         }
+
+if __name__=='__main__':
+    pass

@@ -141,7 +141,7 @@ class QRGenTrainer(BaseTrainer):
         if self.print_dir is not None:
             util.ensure_dir(self.print_dir)
         self.print_every = config['trainer']['print_every'] if 'print_every' in config['trainer'] else 100
-        self.iter_to_print = self.print_every
+        self.iter_to_print = 5 # self.print_every
         self.serperate_print_every = config['trainer']['serperate_print_every'] if 'serperate_print_every' in config['trainer'] else 2500
         self.last_print_images=defaultdict(lambda: 0)
         self.print_next_gen=False
@@ -200,6 +200,7 @@ class QRGenTrainer(BaseTrainer):
             targetvalid = data['targetvalid']
             targetchar = data['targetchar']
         return qr_image, targetvalid,targetchar
+
     def _to_tensor_decode(self, data):
         if self.with_cuda:
             #image = data['image'].to(self.gpu)
@@ -917,9 +918,7 @@ class QRGenTrainer(BaseTrainer):
         wer/=len(gt)
         if individual:
             return cer,wer, pred_strs, all_cer
-        return cer,wer, pred_strs
-
-
+        return cer, wer, pred_strs
 
     def print_images(self,images,text,disc=None,typ='gen',gtImages=None):
         if self.print_dir is not None:

@@ -65,8 +65,11 @@ class QRCenterPixelLoss(nn.Module):
         if self.split:
             self.mask_corners=self.mask_corners[None,...]
 
-    def get_mask(self):
-        return self.mask.detach().numpy().transpose(1, 2, 0)
+    def get_mask(self, numpy=True):
+        if numpy:
+            return self.mask.detach().numpy().transpose(1, 2, 0)
+        else:
+            return self.mask
 
     def forward(self,pred,gt):
         pred = pred.mean(dim=1) #grayscale!
