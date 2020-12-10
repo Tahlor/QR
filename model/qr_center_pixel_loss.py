@@ -81,3 +81,9 @@ class QRCenterPixelLoss(nn.Module):
             diff*=self.mask
             return diff.mean()
 
+
+if __name__=="__main__":
+    import matplotlib.pyplot as plt
+    qr = QRCenterPixelLoss(256, 21, 2, 0.1, True, True)
+    plt.imshow(qr.mask)
+    plt.show()
