@@ -100,7 +100,7 @@ class SimpleQRDataset(Dataset):
             img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
         img = img*2 -1
 
-        targetchar = torch.LongTensor(17).fill_(0)
+        targetchar = torch.LongTensor(self.str_len).fill_(0)
         for i,c in enumerate(gt_char):
             targetchar[i]=self.char_to_index[c]
         targetvalid = torch.FloatTensor([1])
@@ -111,4 +111,3 @@ class SimpleQRDataset(Dataset):
             'targetchar': targetchar,
             'targetvalid': targetvalid
         }
-

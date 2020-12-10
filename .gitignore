@@ -5,7 +5,7 @@ test/swaps/
 *.lnk*
 *.slurm
 *.pth
-#*.sh
+*.sh
 ~archive/
 STYLE\ TRANSFER/
 GT_SWAP/

@@ -18,7 +18,7 @@
             "size":256
         },
         "#data_dir":"../data/abstract_art",
-        "data_dir":"../data/abstract_art",
+        "data_dir":"/media/taylor/Seagate Backup Plus Drive/datasets/abstract_art",
         "shuffle":true,
         "batch_size":28,
         "num_workers":2
@@ -86,9 +86,11 @@
             "img_size":256,
             "qr_size":21,
             "padding":2,
-            "threshold":0.1,
+            "threshold":0.2,
             "bigger":true,
-            "split":true
+            "split":true,
+            "no_corners":true,
+            "factor":0.5
         }
     },
     "metrics":[],

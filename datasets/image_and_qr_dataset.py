@@ -68,7 +68,7 @@ class ImageAndQRDataset(Dataset):
             image = np.array(image)
             image = (2*(torch.from_numpy(image).float()/255)-1).permute(2,0,1)
 
-        qr_image=qr_data['image']
+        qr_image = qr_data['image']
         #if qr_image.size(1)!=image.size(1) or qr_image.size(2)!=image.size(2):
         #    #qr_image = img_f.resize(qr_image[0],image.shape[1:])[None,...]
         #    qr_image = F.interpolate(qr_image[None,...],image.shape[1:],mode='bilinear')[0]
