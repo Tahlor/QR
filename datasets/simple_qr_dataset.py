@@ -13,21 +13,26 @@ import utils.img_f as img_f
 
 import sys
 sys.path.append("./model")
+sys.path.append("./datasets")
 import qr_center_pixel_loss
+import data_utils
 
 import random, string
 PADDING_CONSTANT = -1
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
-    return {'image': torch.stack([b['image'] for b in batch],dim=0),
+    qr_img = torch.stack([b['image'] for b in batch],dim=0)
+
+    d = {'qr_image': qr_img,
             'gt_char': [b['gt_char'] for b in batch],
             'targetchar': torch.stack([b['targetchar'] for b in batch],dim=0),
-            'targetvalid': torch.cat([b['targetvalid'] for b in batch],dim=0)
-            # ,'masked_image': torch.stack([b['masked_img'] for b in batch], dim=0)
-
+            'targetvalid': torch.cat([b['targetvalid'] for b in batch],dim=0),
             }
 
+    if batch['masked_img'][0] is not None:
+        d['masked_image'] = torch.stack([b['masked_img'] for b in batch], dim=0)
+    return d
 
 class SimpleQRDataset(Dataset):
     def __init__(self, dirPath,split,config):
@@ -108,6 +113,10 @@ class SimpleQRDataset(Dataset):
         img = np.array(img)
         if self.final_size is not None:
             img = img_f.resize(img,(self.final_size,self.final_size),degree=0)
+
+        # Slight noise
+        img = data_utils.gaussian_noise(img.astype(np.uint)*255, max_intensity=1)
+
         img = torch.from_numpy(img)[None,...].float()
         if img.max() == 255:
             img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
@@ -119,12 +128,15 @@ class SimpleQRDataset(Dataset):
         targetvalid = torch.FloatTensor([1])
 
         if not self.mask is None:
-            img = masked_img = self.mask * img
+            masked_img = self.mask * img
         else:
-            masked_img = img
-            # x = img.squeeze().detach().numpy()
-            # import matplotlib.pyplot as plt
-            # plt.imshow((x+1)*127.5, cmap="gray");plt.show()
+            masked_img = None
+        if False:
+            x = img.squeeze().detach().numpy()
+            import matplotlib.pyplot as plt
+            plt.imshow((x+1)*127.5, cmap="gray");plt.show()
+            plt.imshow((self.mask.permute(1,2,0)) * 255, cmap="gray"); plt.show()
+            #image = data_utils.gaussian_noise(x*255, max_intensity=1)
 
         return {
             "image": img,
@@ -134,5 +146,8 @@ class SimpleQRDataset(Dataset):
             "masked_img": masked_img
         }
 
+# add noise
+# blur
+
 if __name__=='__main__':
-    pass
+    SimpleQRDataset()

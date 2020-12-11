@@ -106,7 +106,7 @@ for dataset in datasets.keys():
 
                     config.loss_params.pixel.threshold = .2
                     hi_res = "hi_res" if hi_res else "low_res"
-                    name = f"{dataset}_{hi_res}_{patch_type}_{masked_inputs}"
+                    name = f"{dataset}_{hi_res}_{patch_type}_{masked_inputs}_v2"
 
                     config.trainer.print_dir = str(ROOT / f"train_out/{name}")
                     config.sample_data_loader.cache_dir = str(ROOT / f"cache/{name}")

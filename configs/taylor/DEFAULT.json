@@ -94,7 +94,7 @@
     "metrics":[],
     "trainer":{
         "class":"QRGenTrainer",
-        "iterations":300000,
+        "iterations":3000000,
         "save_dir":"saved/",
         "val_step":99990000,
         "save_step":20000,

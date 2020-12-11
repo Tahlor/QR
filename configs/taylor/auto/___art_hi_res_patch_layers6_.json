@@ -235,7 +235,7 @@
         "print_dir":"/media/data/GitHub/qr2/train_out/art_hi_res_patch_layers6_",
         "serperate_print_every":5000,
         "print_every":500,
-        "ramp_qr_losses":true,
+        "ramp_qr_losses":false,
         "ramp_qr_losses_start":160000,
         "ramp_qr_losses_end":180000,
         "modulate_pixel_loss_start":0

@@ -193,12 +193,22 @@ class QRGenTrainer(BaseTrainer):
             qr_image = data['qr_image'].to(self.gpu)
             targetvalid = data['targetvalid'].to(self.gpu)
             targetchar = data['targetchar'].to(self.gpu)
+            qr_image_mask = data['masked_image'].to(self.gpu) if "masked_image" in data else qr_image
+
         else:
             #image = data['image']
             qr_image = data['qr_image']
             targetvalid = data['targetvalid']
             targetchar = data['targetchar']
-        return qr_image, targetvalid,targetchar
+
+        """
+        import matplotlib.pyplot as plt
+        x = qr_image_mask.detach().cpu().numpy()[0].transpose(1,2,0)
+        plt.imshow((x + 1) * 127.5, cmap="gray");plt.show()
+        y = qr_image.detach().cpu().numpy()[0].transpose(1,2,0)
+        plt.imshow((y + 1) * 127.5, cmap="gray");plt.show()
+        """
+        return qr_image_mask, targetvalid,targetchar, qr_image
 
     def _to_tensor_decode(self, data):
         if self.with_cuda:
@@ -640,7 +650,7 @@ class QRGenTrainer(BaseTrainer):
         return losses,log
 
     def run(self,instance,lesson,get=[]):
-        qr_image, targetvalid,targetchars = self._to_tensor(instance)
+        qr_image, targetvalid,targetchars,qr_image_square = self._to_tensor(instance) # qr_image_square is either just qr_image, or a masked qr_image
         batch_size = qr_image.size(0)
 
         losses = {}
@@ -852,7 +862,7 @@ class QRGenTrainer(BaseTrainer):
         # PIXEL LOSS HERE
         if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss and 'skip-pixel' not in lesson:
             if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept or self.iteration<self.modulate_pixel_loss_start:
-                losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
+                losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image_square,**self.loss_params['pixel'])
 
         if get:
             if (len(get)>1 or get[0]=='style') and 'name' in instance:

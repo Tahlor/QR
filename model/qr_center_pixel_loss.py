@@ -55,9 +55,9 @@ class QRCenterPixelLoss(nn.Module):
                 if self.mask[center_y,center_x]==0: #haven't masked the corner
                     if bigger:
                         self.mask[center_y-1:center_y+2,center_x-2]=0.25*factor
-                        self.mask[center_y-1:center_y+2,center_x+3]=0.25*factor
+                        self.mask[center_y-1:center_y+2,center_x+2]=0.25*factor
                         self.mask[center_y-2,center_x-1:center_x+2]=0.25*factor
-                        self.mask[center_y+3,center_x-1:center_x+2]=0.25*factor
+                        self.mask[center_y+2,center_x-1:center_x+2]=0.25*factor
                     self.mask[center_y-1:center_y+2,center_x-1:center_x+2]=0.5*factor
                     self.mask[center_y,center_x]=1
         
@@ -89,7 +89,10 @@ class QRCenterPixelLoss(nn.Module):
         else:
             diff*=self.mask
             return diff.mean()
-
+        if False:
+            import matplotlib.pyplot as plt
+            x = self.mask.detach().cpu().numpy().squeeze()
+            plt.imshow((x + 1) * 127.5, cmap="gray");plt.show()
 import string
 import random
 MASTER_STRING=string.ascii_letters
