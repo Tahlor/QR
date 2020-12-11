@@ -159,7 +159,6 @@ class QRGenTrainer(BaseTrainer):
         self.path_regularize=2
         self.mean_path_length=0
 
-
         self.modulate_pixel_loss = config['trainer']['modulate_pixel_loss'] if 'modulate_pixel_loss' in config['trainer'] else None
         self.modulate_pixel_loss_start=1000 if 'modulate_pixel_loss_start' not in config['trainer'] else config['trainer']['modulate_pixel_loss_start']
         if self.modulate_pixel_loss=='momentum':
