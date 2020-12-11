@@ -354,7 +354,6 @@ class QRGenTrainer(BaseTrainer):
                 for b_loss in losses_to_balance:
                     loss += b_loss
 
-
             if type(loss) is not int:
                 loss.backward()
                 #for p in self.model.parameters():
@@ -850,6 +849,7 @@ class QRGenTrainer(BaseTrainer):
         else:
             log={}
 
+        # PIXEL LOSS HERE
         if ('gen' in lesson or 'auto-gen' in lesson) and 'pixel' in self.loss and 'skip-pixel' not in lesson:
             if self.modulate_pixel_loss!='bang' or proper_ratio>self.proper_accept or self.iteration<self.modulate_pixel_loss_start:
                 losses['pixelLoss'] = self.loss['pixel'](gen_image,qr_image,**self.loss_params['pixel'])
