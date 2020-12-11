@@ -64,7 +64,7 @@ for dataset in datasets.keys():
                     if hi_res:
                         config.loss_weights.char = 0
                         config.loss_weights.valid = 0
-                        config.loss_weights.pixel = 3
+                        config.loss_weights.pixel = 1.6
 
                         config.loss_params.pixel.qr_size = 33
                         config.loss_params.pixel.factor = .5

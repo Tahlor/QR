@@ -60,8 +60,8 @@ class ImageAndQRDataset(Dataset):
 
     def __getitem__(self, idx):
         
-        qr_index = random.randrange(len(self.qr_dataset))#idx%len(self.qr_dataset)
-        image_index = random.randrange(len(self.image_dataset))#idx//len(self.qr_dataset)
+        qr_index = random.randrange(len(self.qr_dataset))       #idx%len(self.qr_dataset)
+        image_index = random.randrange(len(self.image_dataset)) #idx//len(self.qr_dataset)
 
         qr_data = self.qr_dataset[qr_index]
         image,target = self.image_dataset[image_index]
