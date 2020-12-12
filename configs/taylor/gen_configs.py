@@ -23,7 +23,11 @@ ROOT = gen_slurm_scripts.get_root()
 
 VERS="v3"
 out = Path(f"./auto_{VERS}/")
-shutil.rmtree(out)
+try:
+    shutil.rmtree(out)
+except:
+    pass
+
 out.mkdir(parents=True, exist_ok=True)
 config_prime = edict(json.load(Path("./DEFAULT2.json").open()))
 
@@ -43,7 +47,7 @@ datasets = {
 # configs/brian/cf_preArt_trainDecoder_newPix_maskCorners.json
 
 for dataset in datasets.keys():
-    if dataset == "art":
+    if dataset in ["art","texture"]:
         patch_list = ["patch_layers6"]
         masked_list = ["maskedInputs", ""]
     else:
@@ -85,10 +89,9 @@ for dataset in datasets.keys():
                         config.data_loader.QR_dataset.characters = config.data_loader.QR_dataset.alphabet
                         config.data_loader.QR_dataset.error_level = "h"
                         config.data_loader.QR_dataset.min_message_len = config.data_loader.QR_dataset.str_len
-
                         config.trainer.modulate_pixel_loss_start = 0
                         config.data_loader.QR_dataset.mask = True if masked_inputs else False
-
+                        config.trainer.retry_count = 10
                         # bigger discriminator / generator
                         if not is_galois():
                             config.model.generator = config.model.generator.replace("small","")

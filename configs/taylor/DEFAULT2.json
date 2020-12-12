@@ -85,7 +85,7 @@
     "metrics": [],
     "trainer": {
         "class": "QRGenTrainer",
-       "retry": 3,
+       "retry_count": 3,
        "iterations": 300000,
         "save_dir": "saved/",
         "val_step": 99990000,

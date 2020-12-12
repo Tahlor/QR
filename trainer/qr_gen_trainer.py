@@ -825,6 +825,14 @@ class QRGenTrainer(BaseTrainer):
             if self.curriculum.train_decoder and 'eval' not in lesson and 'valid' not in lesson:
                 self.sample_data_loader.dataset.add_gen_sample(gen_image,isvalid,decoded_chars)
 
+            # if True:
+            #     ### SAVE IT HERE!!!
+            #     if isvalid[b]:
+            #         inst = (images[b], chars[b])
+            #         saved = self.saved_valid
+            #         saved_cache = self.saved_cache_valid
+                ### WHY DO WE STILL HAVE CORNER ISSUES?
+
             if 'valid' not in lesson and 'eval' not in lesson:
                 if self.modulate_pixel_loss=='momentum' and self.iteration>self.modulate_pixel_loss_start:
                     if proper_ratio>=self.proper_accept:
