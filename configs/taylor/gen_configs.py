@@ -60,7 +60,7 @@ for dataset in datasets.keys():
                 for patch_type in patch_list:
 
                     config = deepcopy(config_prime)
-                    config.loss_params.pixel.no_corners = False ### MAKE THIS TRUE
+                    config.loss_params.pixel.no_corners = False ### This makes anchor points use the dot mask
 
                     if not coord_conv:
                         config.model.generator = config.model.generator.replace("coordconv", "")
@@ -90,7 +90,7 @@ for dataset in datasets.keys():
                         config.data_loader.QR_dataset.error_level = "h"
                         config.data_loader.QR_dataset.min_message_len = config.data_loader.QR_dataset.str_len
                         config.trainer.modulate_pixel_loss_start = 0
-                        config.data_loader.QR_dataset.mask = True if masked_inputs else False
+                        config.data_loader.QR_dataset.mask = True if masked_inputs else False # input is masked QR code
                         config.trainer.retry_count = 10
                         # bigger discriminator / generator
                         if not is_galois():
