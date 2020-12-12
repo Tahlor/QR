@@ -3,6 +3,7 @@ import json
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
+from easydict import EasyDict as edict
 
 from collections import defaultdict
 import os
@@ -35,10 +36,10 @@ def collate(batch):
     return d
 
 class SimpleQRDataset(Dataset):
-    def __init__(self, dirPath,split,config):
+    def __init__(self, dirPath, split, config):
 
         if "mask" in config and config["mask"]:
-            qr = qr_center_pixel_loss.QRCenterPixelLoss(256, 33, 2, 0.1, bigger=True, split=False, factor=1, no_corners=False)
+            qr = qr_center_pixel_loss.QRCenterPixelLoss(256, 33, 2, 0.1, bigger=True, split=False, factor=1.5, no_corners=False)
             self.mask = qr.get_mask(numpy=False)
         else:
             self.mask = None
@@ -131,12 +132,11 @@ class SimpleQRDataset(Dataset):
             masked_img = self.mask * img
         else:
             masked_img = None
+
         if False:
-            x = img.squeeze().detach().numpy()
-            import matplotlib.pyplot as plt
-            plt.imshow((x+1)*127.5, cmap="gray");plt.show()
-            plt.imshow((self.mask.permute(1,2,0)) * 255, cmap="gray"); plt.show()
-            #image = data_utils.gaussian_noise(x*255, max_intensity=1)
+            plot(img, mask=False)
+            plot(masked_img, mask=False)
+            plot(self.mask, mask=True)
 
         return {
             "image": img,
@@ -149,5 +149,33 @@ class SimpleQRDataset(Dataset):
 # add noise
 # blur
 
+def plot(img, mask=False):
+    import matplotlib.pyplot as plt
+    if mask:
+        plt.imshow((img.permute(1, 2, 0)) * 255, cmap="gray");
+        plt.show()
+    else:
+        x = img.squeeze().detach().numpy()
+        plt.imshow((x + 1) * 127.5, cmap="gray");
+        plt.show()
+
+
 if __name__=='__main__':
-    SimpleQRDataset()
+    config = {"data_set_name": "SimpleQRDataset",
+    "final_size": 256,
+    "str_len": 17,
+    "alphabet": "digits",
+              }
+    config = edict(config)
+    config.str_len = 34
+    config.data_set_name = "SimpleQRDataset"
+    config.alphabet_description = "printable"
+    config.distortions = False
+    config.alphabet = string.printable
+    config.characters = config.alphabet
+    config.error_level = "h"
+    config.mask = True
+
+    data = SimpleQRDataset(dirPath=None, split='train', config=config)
+    m = next(iter(data))
+

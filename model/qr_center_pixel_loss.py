@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import torch
 from torch import nn
 import numpy as np
@@ -65,11 +67,24 @@ class QRCenterPixelLoss(nn.Module):
         if self.split:
             self.mask_corners=self.mask_corners[None,...]
 
-    def get_mask(self, numpy=True):
+        if False: # plot
+            self.plot(self.get_mask())
+            if self.split:
+                self.plot(self.get_mask(corner_mask=True))
+            pass
+
+    @staticmethod
+    def plot(mask):
+        mask = (mask.squeeze() * 255).astype(np.uint8)
+        plt.imshow(mask[:, :, np.newaxis])
+        plt.show()
+
+    def get_mask(self, numpy=True, corner_mask=False):
+        mask = self.mask_corners if corner_mask else self.mask
         if numpy:
-            return self.mask.detach().numpy().transpose(1, 2, 0)
+            return mask.detach().numpy().transpose(1, 2, 0)
         else:
-            return self.mask
+            return mask
 
     def forward(self,pred,gt):
         pred = pred.mean(dim=1) #grayscale!
@@ -93,6 +108,7 @@ class QRCenterPixelLoss(nn.Module):
             import matplotlib.pyplot as plt
             x = self.mask.detach().cpu().numpy().squeeze()
             plt.imshow((x + 1) * 127.5, cmap="gray");plt.show()
+
 import string
 import random
 MASTER_STRING=string.ascii_letters
@@ -117,14 +133,14 @@ def make_QR_code(length=58, size=256, error_level="l"):
     return img
 
 if __name__=="__main__":
-    import matplotlib.pyplot as plt
     size = 256
     length = 34
     error = "h" # h is best
     qr_img = make_QR_code(length, size, error)
-    qr = QRCenterPixelLoss(size, 33, 2, 0.1, bigger=True, split=False, factor=.1, no_corners=True)
+    qr = QRCenterPixelLoss(size, 33, 2, 0.1, bigger=True, split=False, factor=1.5, no_corners=False)
     mask = (qr.get_mask().squeeze()*255).astype(np.uint8)
     output = (qr_img + mask)/2
-    plt.imshow(output[:, :, np.newaxis])
-    plt.show()
+    if False:
+        plt.imshow(output[:, :, np.newaxis])
+        plt.show()
 
