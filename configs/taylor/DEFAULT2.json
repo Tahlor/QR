@@ -165,9 +165,9 @@
         "serperate_print_every": 5000,
         "print_every": 500,
 
-        "ramp_qr_losses": false,
+        "ramp_qr_losses": true,
         "ramp_qr_losses_start": 0,
-        "ramp_qr_losses_end": 5000
+        "ramp_qr_losses_end": 1000
     },
     "model": {
 	"arch": "QRWraper",

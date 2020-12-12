@@ -21,7 +21,7 @@ from time import sleep
 
 ROOT = gen_slurm_scripts.get_root()
 
-VERS="v4"
+VERS="v5"
 out = Path(f"./auto_{VERS}/")
 try:
     shutil.rmtree(out)
@@ -61,7 +61,7 @@ for dataset in datasets.keys():
 
                     config = deepcopy(config_prime)
                     config.loss_params.pixel.no_corners = False ### MAKE THIS TRUE
-
+                    #config.training.ramp_qr_losses = True
                     if not coord_conv:
                         config.model.generator = config.model.generator.replace("coordconv", "")
 
@@ -73,7 +73,7 @@ for dataset in datasets.keys():
                         config.loss_weights.pixel = 1.2
 
                         config.loss_params.pixel.qr_size = 33
-                        config.loss_params.pixel.factor = 1.5
+                        config.loss_params.pixel.factor = .5
 
                         # delete encoder
                         config.model.generator = config.model.generator.replace("predict_offset", "")  # "SG2UGen small coordconv unbound predict_offset"
