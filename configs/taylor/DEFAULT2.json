@@ -85,7 +85,8 @@
     "metrics": [],
     "trainer": {
         "class": "QRGenTrainer",
-        "iterations": 300000,
+       "retry": 3,
+       "iterations": 300000,
         "save_dir": "saved/",
         "val_step": 99990000,
         "save_step": 20000,
@@ -164,7 +165,7 @@
         "serperate_print_every": 5000,
         "print_every": 500,
 
-        "ramp_qr_losses": true,
+        "ramp_qr_losses": false,
         "ramp_qr_losses_start": 0,
         "ramp_qr_losses_end": 5000
     },
