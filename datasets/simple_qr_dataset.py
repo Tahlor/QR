@@ -172,6 +172,17 @@ def plot(img, mask=False):
         plt.show()
 
 
+def plot(img, mask=False):
+    import matplotlib.pyplot as plt
+    if mask:
+        plt.imshow((img.permute(1, 2, 0)) * 255, cmap="gray");
+        plt.show()
+    else:
+        x = img.squeeze().detach().numpy()
+        plt.imshow((x + 1) * 127.5, cmap="gray");
+        plt.show()
+
+
 if __name__=='__main__':
     config = {"data_set_name": "SimpleQRDataset",
     "final_size": 256,

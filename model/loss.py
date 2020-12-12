@@ -15,6 +15,7 @@ from model.key_loss import pushMinDist
 from torch.nn.functional import cross_entropy
 from model.triplet_loss import hardTriplet
 from model.qr_center_pixel_loss import QRCenterPixelLoss
+#from model.qr_center_pixel_loss_WORKING import QRCenterPixelLoss
 
 def my_loss(y_input, y_target):
     return F.nll_loss(y_input, y_target)

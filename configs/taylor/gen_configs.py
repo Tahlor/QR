@@ -25,11 +25,15 @@ ROOT = gen_slurm_scripts.get_root()
 
 VERS="v3"
 out = Path(f"./auto_{VERS}/")
+<<<<<<< HEAD
 try:
     shutil.rmtree(out)
 except:
     pass
 
+=======
+shutil.rmtree(out)
+>>>>>>> 612f172... update
 out.mkdir(parents=True, exist_ok=True)
 config_prime = edict(json.load(Path("./DEFAULT2.json").open()))
 
@@ -49,7 +53,11 @@ datasets = {
 # configs/brian/cf_preArt_trainDecoder_newPix_maskCorners.json
 
 for dataset in datasets.keys():
+<<<<<<< HEAD
     if dataset in ["art","texture"]:
+=======
+    if dataset == "art":
+>>>>>>> 612f172... update
         patch_list = ["patch_layers6"]
         masked_list = ["maskedInputs", ""]
     else:
@@ -74,7 +82,11 @@ for dataset in datasets.keys():
                         config.loss_weights.valid = 0
                         config.loss_weights.pixel = 1.2
 
+<<<<<<< HEAD
                         config.loss_params.pixel.qr_size = config.model.qr_size = 33
+=======
+                        config.loss_params.pixel.qr_size = 33
+>>>>>>> 612f172... update
                         config.loss_params.pixel.factor = 1.5
 
                         # delete encoder
@@ -113,9 +125,13 @@ for dataset in datasets.keys():
                     else:
                         config.loss_params.pixel.factor = 1
 
+<<<<<<< HEAD
                     config.model.discriminator = "StyleGAN2 mask_corners " + patch_type
 
                     config.loss_params.pixel.threshold = .6
+=======
+                    config.loss_params.pixel.threshold = .25
+>>>>>>> 612f172... update
                     hi_res = "hi_res" if hi_res else "low_res"
                     name = f"{VERS}_{dataset}_{hi_res}_{patch_type}_{masked_inputs}"
 

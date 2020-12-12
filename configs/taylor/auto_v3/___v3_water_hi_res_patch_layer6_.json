@@ -92,7 +92,10 @@
     "metrics":[],
     "trainer":{
         "class":"QRGenTrainer",
+<<<<<<< HEAD
         "retry_count":10,
+=======
+>>>>>>> 612f172... update
         "iterations":300000,
         "save_dir":"saved/",
         "val_step":99990000,
@@ -235,7 +238,11 @@
         "print_dir":"/media/data/GitHub/qr2/train_out/v3/v3_water_hi_res_patch_layer6_",
         "serperate_print_every":5000,
         "print_every":500,
+<<<<<<< HEAD
         "ramp_qr_losses":false,
+=======
+        "ramp_qr_losses":true,
+>>>>>>> 612f172... update
         "ramp_qr_losses_start":0,
         "ramp_qr_losses_end":5000,
         "modulate_pixel_loss_start":0

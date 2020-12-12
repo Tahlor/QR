@@ -1,5 +1,5 @@
 {
-    "name":"v3_art_hi_res_patch_layers6_",
+    "name":"v3_texture_hi_res_patch_layer6_",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -24,13 +24,13 @@
             "size":256
         },
         "#data_dir":"../data/abstract_art",
-        "data_dir":"/media/taylor/Seagate Backup Plus Drive/datasets/abstract_art",
+        "data_dir":"/media/taylor/Seagate Backup Plus Drive/datasets/texture",
         "shuffle":true,
         "batch_size":32,
         "num_workers":2
     },
     "sample_data_loader":{
-        "cache_dir":"/media/data/GitHub/qr2/cache/v3/v3_art_hi_res_patch_layers6_",
+        "cache_dir":"/media/data/GitHub/qr2/cache/v3/v3_texture_hi_res_patch_layer6_",
         "max_saved":1000,
         "forget_new_freq":0.7,
         "batch_size":64,
@@ -92,10 +92,6 @@
     "metrics":[],
     "trainer":{
         "class":"QRGenTrainer",
-<<<<<<< HEAD
-        "retry_count":10,
-=======
->>>>>>> 612f172... update
         "iterations":300000,
         "save_dir":"saved/",
         "val_step":99990000,
@@ -235,14 +231,10 @@
         },
         "combine_qr_loss":true,
         "use_learning_schedule":false,
-        "print_dir":"/media/data/GitHub/qr2/train_out/v3/v3_art_hi_res_patch_layers6_",
+        "print_dir":"/media/data/GitHub/qr2/train_out/v3/v3_texture_hi_res_patch_layer6_",
         "serperate_print_every":5000,
         "print_every":500,
-<<<<<<< HEAD
-        "ramp_qr_losses":false,
-=======
         "ramp_qr_losses":true,
->>>>>>> 612f172... update
         "ramp_qr_losses_start":0,
         "ramp_qr_losses_end":5000,
         "modulate_pixel_loss_start":0
