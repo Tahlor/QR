@@ -1,3 +1,4 @@
+from easydict import EasyDict as edict
 from pathlib import Path
 import numpy as np
 import torch
@@ -17,6 +18,9 @@ import torchvision.utils as vutils
 from datasets import gen_sample_dataset
 
 from model.style_gan2_losses import d_logistic_loss, d_r1_loss, g_nonsaturating_loss, g_path_regularize
+
+SAVE_VALID=True
+SAVE_GOOD_FAKES=True
 
 def make_noise(batch, latent_dim, n_noise, device):
     if n_noise == 1:
@@ -46,7 +50,14 @@ class QRGenTrainer(BaseTrainer):
                  data_loader, valid_data_loader=None, train_logger=None):
         super(QRGenTrainer, self).__init__(model, loss, metrics, resume, config, train_logger)
         assert(self.curriculum)
-        self.config = config
+        self.config = edict(config)
+
+        self.valid_dir = Path(self.config.sample_data_loader.cache_dir) / "valid"
+        self.good_fakes_dir = Path(self.config.sample_data_loader.cache_dir) / "good_fakes"
+        self.valid_dir.mkdir(exist_ok=True,parents=True)
+        self.good_fakes_dir.mkdir(exist_ok=True, parents=True)
+
+
         if data_loader is not None:
             batch_size_size = data_loader.batch_size
             self.data_loader = data_loader
@@ -141,7 +152,7 @@ class QRGenTrainer(BaseTrainer):
         if self.print_dir is not None:
             util.ensure_dir(self.print_dir)
         self.print_every = config['trainer']['print_every'] if 'print_every' in config['trainer'] else 100
-        self.iter_to_print = 5 # self.print_every
+        self.iter_to_print = 5 # self.print_every - for the first one, just print after 5
         self.serperate_print_every = config['trainer']['serperate_print_every'] if 'serperate_print_every' in config['trainer'] else 2500
         self.last_print_images=defaultdict(lambda: 0)
         self.print_next_gen=False
@@ -186,6 +197,10 @@ class QRGenTrainer(BaseTrainer):
 
         self.hack_gen_loss_cap = config['trainer']['hack_gen_loss_cap'] if 'hack_gen_loss_cap' in config['trainer'] else None
 
+        if 'pixel' in  self.loss and "corner_image_mask" in self.loss['pixel'].__dict__:
+            self.corner_image_mask = self.loss['pixel'].corner_image_mask
+        else:
+            self.corner_image_mask = None
 
     def _to_tensor(self, data):
         if self.with_cuda:
@@ -652,7 +667,7 @@ class QRGenTrainer(BaseTrainer):
     def run(self,instance,lesson,get=[]):
         qr_image, targetvalid,targetchars,qr_image_square = self._to_tensor(instance) # qr_image_square is either just qr_image, or a masked qr_image
         batch_size = qr_image.size(0)
-
+        worst_fake_index = best_fake_index = None
         losses = {}
 
         if 'gen_reg' in lesson:
@@ -708,7 +723,11 @@ class QRGenTrainer(BaseTrainer):
         if 'disc' in lesson or 'auto-disc' in lesson or 'sample-disc' in lesson:
             #WHERE DISCRIMINATOR LOSS IS COMPUTED
             if self.StyleGAN2:
-                fake_pred=self.model.discriminator(fake.detach())
+                fake_detach = fake.detach()
+                avg_fake = torch.mean(torch.reshape(fake_detach, [fake_detach.shape[0], -1]), 1)
+                best_fake_index = torch.argmax(avg_fake).item()
+                worst_fake_index = torch.argmin(avg_fake).item()
+                fake_pred=self.model.discriminator(fake_detach)
                 real_pred=self.model.discriminator(real)
                 disc_loss = d_logistic_loss(real_pred, fake_pred)
             else:
@@ -788,11 +807,19 @@ class QRGenTrainer(BaseTrainer):
             predicted_disc=None
 
 
-        if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson):
+        if ('gen' in lesson or 'auto-gen' in lesson or 'valid' in lesson or 'eval' in lesson or 'disc' in lesson):
             correctly_decoded=0
             prepared_images = ((gen_image+1)*255/2).cpu().detach().permute(0,2,3,1).numpy().clip(0,255).astype(np.uint8)
             isvalid=[]
             decoded_chars=[]
+
+            # Force corners and a clean border
+            if self.corner_image_mask is not None:
+                #old = prepared_images.copy()
+                prepared_images = np.maximum(prepared_images, self.corner_image_mask[:,:,None])
+                ## FIX - the mask should add BLACK and WHITE to corners etc.
+                #prepared_images[prepared_images>0] = np.minimum(prepared_images, self.corner_image_mask[:,:,None])
+
             for b in range(batch_size):
                 read = util.zbar_decode(prepared_images[b])
                 #qqq = ((qr_image[b]+1)*255/2).cpu().permute(1,2,0).numpy()
@@ -800,30 +827,41 @@ class QRGenTrainer(BaseTrainer):
                 #assert(readA==instance['gt_char'][b])
                 #import pdb;pdb.set_trace()
                 decoded_chars.append(read)
+                name = random.randint(0,400) # self.iteration
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                     isvalid.append(True)
-                    #if self.i_cant:
-                    #    img_f.imwrite('i_cant/cant{}.png'.format(random.randrange(0,100)),prepared_images[b])
+                    if SAVE_VALID:
+                       img_f.imwrite(self.valid_dir /
+                                     f"{self.iteration}_{b}.png", prepared_images[b])
                 else:
                     isvalid.append(False)
+
+                if best_fake_index is not None and SAVE_GOOD_FAKES and name <= 200:
+                    if b == best_fake_index:
+                        img_f.imwrite(self.good_fakes_dir / f"{name}_{b}.png", prepared_images[b])
+                    elif b == worst_fake_index:
+                        img_f.imwrite(self.good_fakes_dir / f"WORST_{name}_{b}.png", prepared_images[b])
+
+
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size
                 #if proper_ratio ==1 and self.save_unreadable:
                 #    self.i_cant=True
             log={'proper_QR':proper_ratio}
 
-            #If this is generating valid QR codes, we'll save a snapshot before the weight update
-            if proper_ratio>0.9 and self.iteration-self.last_good_iteration>self.save_step_minor:
-                self._save_checkpoint(good='good')
-                self.last_good_iteration = self.iteration
-            elif proper_ratio<=0.9 and proper_ratio>0.5 and self.iteration-self.last_okay_iteration>self.save_step_minor:
-                self._save_checkpoint(good='okay')
-                self.last_okay_iteration = self.iteration
+            if not lesson == 'disc':
+                #If this is generating valid QR codes, we'll save a snapshot before the weight update
+                if proper_ratio>0.9 and self.iteration-self.last_good_iteration>self.save_step_minor:
+                    self._save_checkpoint(good='good')
+                    self.last_good_iteration = self.iteration
+                elif proper_ratio<=0.9 and proper_ratio>0.5 and self.iteration-self.last_okay_iteration>self.save_step_minor:
+                    self._save_checkpoint(good='okay')
+                    self.last_okay_iteration = self.iteration
 
 
-            if self.curriculum.train_decoder and 'eval' not in lesson and 'valid' not in lesson:
-                self.sample_data_loader.dataset.add_gen_sample(gen_image,isvalid,decoded_chars)
+                if self.curriculum.train_decoder and 'eval' not in lesson and 'valid' not in lesson:
+                    self.sample_data_loader.dataset.add_gen_sample(gen_image,isvalid,decoded_chars)
 
             # if True:
             #     ### SAVE IT HERE!!!
@@ -833,35 +871,35 @@ class QRGenTrainer(BaseTrainer):
             #         saved_cache = self.saved_cache_valid
                 ### WHY DO WE STILL HAVE CORNER ISSUES?
 
-            if 'valid' not in lesson and 'eval' not in lesson:
-                if self.modulate_pixel_loss=='momentum' and self.iteration>self.modulate_pixel_loss_start:
-                    if proper_ratio>=self.proper_accept:
-                        self.pixel_weight_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_weight_delta
-                        self.pixel_thresh_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_thresh_delta
-                    else:
-                        self.pixel_weight_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_weight_delta
-                        self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
-                    
-                    init_weight=self.lossWeights['pixel']
-                    self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
-                    self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],self.min_pixel_weight),self.max_pixel_weight)
+                if 'valid' not in lesson and 'eval' not in lesson:
+                    if self.modulate_pixel_loss=='momentum' and self.iteration>self.modulate_pixel_loss_start:
+                        if proper_ratio>=self.proper_accept:
+                            self.pixel_weight_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_weight_delta
+                            self.pixel_thresh_delta = (1-self.pixel_momentum_B_good)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_good*self.pixel_thresh_delta
+                        else:
+                            self.pixel_weight_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_weight_delta
+                            self.pixel_thresh_delta = (1-self.pixel_momentum_B_bad)*(self.proper_accept-proper_ratio) + self.pixel_momentum_B_bad*self.pixel_thresh_delta
 
-                    if 'threshold' in self.loss_params['pixel']:
-                        threshold = self.loss_params['pixel']['threshold']
-                    else:
-                        threshold = self.loss['pixel'].threshold
-                    threshold -= self.pixel_thresh_delta*self.pixel_thresh_rate
-                    threshold = min(max(threshold,0.05),1.0)
-                    if 'threshold' in self.loss_params['pixel']:
-                        self.loss_params['pixel']['threshold'] = threshold
-                    else:
-                        self.loss['pixel'].threshold = threshold
-                    #This here is my hack method of allowing the training to resume at the same weight and thresh
-                    self.config['loss_weights']['pixel']=self.lossWeights['pixel']
-                    self.config['loss_params']['pixel']['threshold']=threshold
-                    if init_weight != self.lossWeights['pixel']:
-                        print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,threshold,self.pixel_thresh_delta))
-                #elif self.modulate_pixel_loss=='bang':
+                        init_weight=self.lossWeights['pixel']
+                        self.lossWeights['pixel'] += self.pixel_weight_delta*self.pixel_weight_rate
+                        self.lossWeights['pixel'] = min(max(self.lossWeights['pixel'],self.min_pixel_weight),self.max_pixel_weight)
+
+                        if 'threshold' in self.loss_params['pixel']:
+                            threshold = self.loss_params['pixel']['threshold']
+                        else:
+                            threshold = self.loss['pixel'].threshold
+                        threshold -= self.pixel_thresh_delta*self.pixel_thresh_rate
+                        threshold = min(max(threshold,0.05),1.0)
+                        if 'threshold' in self.loss_params['pixel']:
+                            self.loss_params['pixel']['threshold'] = threshold
+                        else:
+                            self.loss['pixel'].threshold = threshold
+                        #This here is my hack method of allowing the training to resume at the same weight and thresh
+                        self.config['loss_weights']['pixel']=self.lossWeights['pixel']
+                        self.config['loss_params']['pixel']['threshold']=threshold
+                        if init_weight != self.lossWeights['pixel']:
+                            print('proper:{}  pixel loss weight:{:.4} D({:.4}), threshold:{:.4} D({:.4})'.format(proper_ratio,self.lossWeights['pixel'],self.pixel_weight_delta,threshold,self.pixel_thresh_delta))
+                    #elif self.modulate_pixel_loss=='bang':
 
 
         else:
