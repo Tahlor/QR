@@ -21,7 +21,7 @@ from time import sleep
 
 ROOT = gen_slurm_scripts.get_root()
 
-VERS="v3"
+VERS="v5"
 out = Path(f"./auto_{VERS}/")
 try:
     shutil.rmtree(out)
@@ -60,8 +60,8 @@ for dataset in datasets.keys():
                 for patch_type in patch_list:
 
                     config = deepcopy(config_prime)
-                    config.loss_params.pixel.no_corners = False ### This makes anchor points use the dot mask
-
+                    config.loss_params.pixel.no_corners = False ### MAKE THIS TRUE
+                    #config.training.ramp_qr_losses = True
                     if not coord_conv:
                         config.model.generator = config.model.generator.replace("coordconv", "")
 
@@ -73,7 +73,7 @@ for dataset in datasets.keys():
                         config.loss_weights.pixel = 1.2
 
                         config.loss_params.pixel.qr_size = 33
-                        config.loss_params.pixel.factor = 1.5
+                        config.loss_params.pixel.factor = .5
 
                         # delete encoder
                         config.model.generator = config.model.generator.replace("predict_offset", "")  # "SG2UGen small coordconv unbound predict_offset"
@@ -90,7 +90,7 @@ for dataset in datasets.keys():
                         config.data_loader.QR_dataset.error_level = "h"
                         config.data_loader.QR_dataset.min_message_len = config.data_loader.QR_dataset.str_len
                         config.trainer.modulate_pixel_loss_start = 0
-                        config.data_loader.QR_dataset.mask = True if masked_inputs else False # input is masked QR code
+                        config.data_loader.QR_dataset.mask = True if masked_inputs else False
                         config.trainer.retry_count = 10
                         # bigger discriminator / generator
                         if not is_galois():

@@ -30,7 +30,8 @@ def getDataLoader(config,split):
         shuffleValid = config['validation']['shuffle']
 
         if data_set_name=='SimpleQRDataset':
-            return withCollate(simple_qr_dataset.SimpleQRDataset,simple_qr_dataset.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
+            collate = simple_qr_dataset.collate
+            return withCollate(simple_qr_dataset.SimpleQRDataset,collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AdvancedQRDataset2':
             return withCollate(advanced_qr_dataset2.AdvancedQRDataset2,advanced_qr_dataset2.collate,batch_size,valid_batch_size,shuffle,shuffleValid,numDataWorkers,split,data_dir,config)
         elif data_set_name=='AdvancedQRDataset3':

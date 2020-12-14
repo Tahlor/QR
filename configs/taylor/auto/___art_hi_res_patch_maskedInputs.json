@@ -1,5 +1,5 @@
 {
-    "name":"DEFAULT",
+    "name":"art_hi_res_patch_maskedInputs",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -10,21 +10,27 @@
         "QR_dataset":{
             "data_set_name":"SimpleQRDataset",
             "final_size":256,
-            "str_len":17,
-            "alphabet":"digits"
+            "str_len":34,
+            "alphabet":"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\u000b\f",
+            "alphabet_description":"printable",
+            "distortions":false,
+            "characters":"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\u000b\f",
+            "error_level":"h",
+            "min_message_len":34,
+            "mask":true
         },
         "image_dataset_name":"simple",
         "image_dataset_config":{
             "size":256
         },
         "#data_dir":"../data/abstract_art",
-        "data_dir":"../fsl_groups/fslg_qr/compute/data/abstract_art",
+        "data_dir":"/media/taylor/Seagate Backup Plus Drive/datasets/abstract_art",
         "shuffle":true,
         "batch_size":28,
         "num_workers":2
     },
     "sample_data_loader":{
-        "cache_dir":"cache/preArt_trainDecoder_newPix_maskCorners",
+        "cache_dir":"/media/data/GitHub/qr2/cache/art_hi_res_patch_maskedInputs",
         "max_saved":1000,
         "forget_new_freq":0.7,
         "batch_size":64,
@@ -59,17 +65,7 @@
             0.991
         ]
     },
-    "optimizer_type_decoder":"Adam",
-    "optimizer_decoder":{
-        "lr":0.002,
-        "betas":[
-            0.5,
-            0.999
-        ]
-    },
     "loss":{
-        "char":"cross_entropy",
-        "valid":"sigmoid_BCE_loss",
         "pixel":"QRCenterPixelLoss"
     },
     "loss_weights":{
@@ -77,24 +73,26 @@
         "generator":1.0,
         "gen_reg":1.0,
         "disc_reg":1.0,
-        "char":0.5,
-        "valid":1.0,
-        "pixel":1.4
+        "char":0,
+        "valid":0,
+        "pixel":3
     },
     "loss_params":{
         "pixel":{
             "img_size":256,
-            "qr_size":21,
+            "qr_size":33,
             "padding":2,
-            "threshold":0.1,
+            "threshold":0.2,
             "bigger":true,
-            "split":true
+            "split":true,
+            "no_corners":false,
+            "factor":0.5
         }
     },
     "metrics":[],
     "trainer":{
         "class":"QRGenTrainer",
-        "iterations":3000000,
+        "iterations":300000,
         "save_dir":"saved/",
         "val_step":99990000,
         "save_step":20000,
@@ -111,18 +109,6 @@
         "curriculum":{
             "0":[
                 [
-                    "decoder"
-                ],
-                [
-                    "gen"
-                ],
-                [
-                    "disc"
-                ],
-                [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
@@ -135,7 +121,10 @@
                     "disc"
                 ],
                 [
-                    "decoder"
+                    "gen"
+                ],
+                [
+                    "disc"
                 ],
                 [
                     "gen"
@@ -153,25 +142,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -189,25 +169,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -225,25 +196,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -270,18 +232,19 @@
         },
         "combine_qr_loss":true,
         "use_learning_schedule":false,
-        "print_dir":"train_out/preArt_trainDecoder_newPix_maskCorners",
+        "print_dir":"/media/data/GitHub/qr2/train_out/art_hi_res_patch_maskedInputs",
         "serperate_print_every":5000,
         "print_every":500,
         "ramp_qr_losses":false,
         "ramp_qr_losses_start":160000,
-        "ramp_qr_losses_end":180000
+        "ramp_qr_losses_end":180000,
+        "modulate_pixel_loss_start":0
     },
     "model":{
         "arch":"QRWraper",
         "style_dim":512,
-        "generator":"SG2UGen small coordconv unbound predict_offset",
+        "generator":"SG2UGen small  unbound ",
         "discriminator":"StyleGAN2 smaller mask_corners",
-        "pretrained_qr":"saved/default_cconv_digits_multimask/checkpoint-latest.pth"
+        "pretrained_qr":null
     }
 }

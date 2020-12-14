@@ -35,6 +35,7 @@ def makeQR(text,size=None):
         img = cv2.resize(img,(size,size),degree=0)
     return img
     #img.save("tmp1.png")
+
 def contrast(qr_img,amount):
     qr_img = np.copy(qr_img)
     qr_img=qr_img*(1-amount)
@@ -65,6 +66,7 @@ def superimpose(background_img, qr_img, threshold, output_folder="images/superim
     added_image = cropped*threshold + qr_img*(1 - threshold)
     #cv2.imwrite(str(output_file_path), added_image)
     return added_image #output_file_path
+
 if __name__=='__main__':
     qr_decoders = {
             #'opencv': cv2.QRCodeDetector(),

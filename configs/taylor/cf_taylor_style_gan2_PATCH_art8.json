@@ -1,5 +1,5 @@
 {
-    "name":"DEFAULT",
+    "name":"cf_taylor_style_gan2_PATCH_art8",
     "cuda":true,
     "gpu":0,
     "save_mode":"state_dict",
@@ -10,33 +10,18 @@
         "QR_dataset":{
             "data_set_name":"SimpleQRDataset",
             "final_size":256,
-            "str_len":17,
-            "alphabet":"digits"
+            "box_size":6,
+            "border":1,
+            "mask_pattern":1
         },
         "image_dataset_name":"simple",
         "image_dataset_config":{
             "size":256
         },
-        "#data_dir":"../data/abstract_art",
-        "data_dir":"../fsl_groups/fslg_qr/compute/data/abstract_art",
+        "data_dir":"../data/abstract_art",
         "shuffle":true,
-        "batch_size":28,
+        "batch_size":16,
         "num_workers":2
-    },
-    "sample_data_loader":{
-        "cache_dir":"cache/preArt_trainDecoder_newPix_maskCorners",
-        "max_saved":1000,
-        "forget_new_freq":0.7,
-        "batch_size":64,
-        "num_workers":2,
-        "seed_dataset_config":{
-            "final_size":256,
-            "alphabet":"digits",
-            "max_message_len":17,
-            "background_image_path":"../data/LSUN",
-            "use_lsun":true,
-            "distortions":true
-        }
     },
     "validation":{
         "shuffle":false,
@@ -59,70 +44,34 @@
             0.991
         ]
     },
-    "optimizer_type_decoder":"Adam",
-    "optimizer_decoder":{
-        "lr":0.002,
-        "betas":[
-            0.5,
-            0.999
-        ]
-    },
-    "loss":{
-        "char":"cross_entropy",
-        "valid":"sigmoid_BCE_loss",
-        "pixel":"QRCenterPixelLoss"
-    },
+    "loss":{},
     "loss_weights":{
         "discriminator":1.0,
         "generator":1.0,
         "gen_reg":1.0,
-        "disc_reg":1.0,
-        "char":0.5,
-        "valid":1.0,
-        "pixel":1.4
+        "disc_reg":1.0
     },
-    "loss_params":{
-        "pixel":{
-            "img_size":256,
-            "qr_size":21,
-            "padding":2,
-            "threshold":0.1,
-            "bigger":true,
-            "split":true
-        }
-    },
+    "loss_params":{},
     "metrics":[],
     "trainer":{
         "class":"QRGenTrainer",
-        "iterations":3000000,
+        "iterations":300000,
         "save_dir":"saved/",
         "val_step":99990000,
-        "save_step":20000,
-        "save_step_minor":250,
+        "save_step":10000,
+        "save_step_minor":500,
         "log_step":500,
         "verbosity":1,
         "monitor":"loss",
         "freeze_param_names":[
             "qr_net"
         ],
-        "slow_param_names":[
+        "#slow_param_names":[
             "style_emb"
         ],
         "curriculum":{
             "0":[
                 [
-                    "decoder"
-                ],
-                [
-                    "gen"
-                ],
-                [
-                    "disc"
-                ],
-                [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
@@ -135,7 +84,10 @@
                     "disc"
                 ],
                 [
-                    "decoder"
+                    "gen"
+                ],
+                [
+                    "disc"
                 ],
                 [
                     "gen"
@@ -153,25 +105,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -189,25 +132,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -225,25 +159,16 @@
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
                 ],
                 [
-                    "decoder"
-                ],
-                [
                     "gen"
                 ],
                 [
                     "disc"
-                ],
-                [
-                    "decoder"
                 ],
                 [
                     "gen"
@@ -263,25 +188,17 @@
         "forget_new_freq":0.95,
         "balance_loss":"sign_preserve_var",
         "balance_var_x":{
-            "0":[
-                1.5,
-                "pixel"
-            ]
+            "0":[]
         },
-        "combine_qr_loss":true,
         "use_learning_schedule":false,
-        "print_dir":"train_out/preArt_trainDecoder_newPix_maskCorners",
+        "print_dir":null,
         "serperate_print_every":5000,
-        "print_every":500,
-        "ramp_qr_losses":false,
-        "ramp_qr_losses_start":160000,
-        "ramp_qr_losses_end":180000
+        "print_every":250
     },
     "model":{
         "arch":"QRWraper",
         "style_dim":512,
-        "generator":"SG2UGen small coordconv unbound predict_offset",
-        "discriminator":"StyleGAN2 smaller mask_corners",
-        "pretrained_qr":"saved/default_cconv_digits_multimask/checkpoint-latest.pth"
+        "generator":"StyleGAN2 small coordconv",
+        "discriminator":"StyleGAN2 smaller patch layers8"
     }
 }

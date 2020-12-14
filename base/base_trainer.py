@@ -12,6 +12,8 @@ from utils.curriculum import Curriculum
 from model import *
 #from ..model import PairingGraph
 
+RETRY=True
+
 class BaseTrainer:
     """
     Base class for all trainers
@@ -197,7 +199,7 @@ class BaseTrainer:
         #assert self.monitor_mode == 'min' or self.monitor_mode == 'max'
         self.monitor_best = math.inf if self.monitor_mode == 'min' else -math.inf
         self.retry_count = config['trainer']['retry_count'] if 'retry_count' in config['trainer'] else 1
-        if self.retry_count >1:
+        if self.retry_count > 1 and not RETRY:
             raise NotImplementedError('retry is disabled')
         self.start_iteration = 1
         self.checkpoint_dir = os.path.join(config['trainer']['save_dir'], self.name)
@@ -242,17 +244,21 @@ class BaseTrainer:
             lastErr=None
             if self.useLearningSchedule:
                 self.lr_schedule.step()
-            #for attempt in range(self.retry_count):
-            #    try:
-            result = self._train_iteration(self.iteration)
-            #        break
-            #    except RuntimeError as err:
-            #        torch.cuda.empty_cache() #this is primarily to catch rare CUDA out of memory errors
-            #        lastErr = err
-            #if result is None:
-            #    if self.retry_count>1:
-            #        print('Failed all {} times!'.format(self.retry_count))
-            #    raise lastErr
+            if RETRY:
+                for attempt in range(self.retry_count):
+                   try:
+                       result = self._train_iteration(self.iteration)
+                       break
+                   except RuntimeError as err:
+                       torch.cuda.empty_cache() #this is primarily to catch rare CUDA out of memory errors
+                       lastErr = err
+                       self.iteration += 1 # skip that one
+                if result is None:
+                   if self.retry_count>1:
+                       print('Failed all {} times!'.format(self.retry_count))
+                   raise lastErr
+            else:
+                result = self._train_iteration(self.iteration)
 
             elapsed_time = timeit.default_timer() - t
             sumLog['sec_per_iter'] += elapsed_time

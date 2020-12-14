@@ -73,17 +73,20 @@ def main(config, resume):
     else:
         trainerClass = Trainer
     print('before trainer')
+
     trainer = trainerClass(model, loss, metrics,
                       resume=resume,
                       config=config,
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
                       train_logger=train_logger)
+
     if config['trainer']['class']=='HWRWithSynthTrainer':
         trainer.gen = gen_model
     print('after trainer')
 
     name=config['name']
+
     def handleSIGINT(sig, frame):
         trainer.save()
         update_status(name,'stopped!',supercomputer)

@@ -153,7 +153,6 @@ class QRWraper(BaseModel):
                     discriminator_state_dict[key[14:]] = value
             self.discriminator.load_state_dict( discriminator_state_dict )
 
-
     def forward(self,qr_image,style=None,step=None, alpha=None,return_latent=False):
         batch_size = qr_image.size(0)
         if style is None:

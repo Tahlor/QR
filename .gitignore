@@ -5,13 +5,15 @@ test/swaps/
 *.lnk*
 *.slurm
 *.pth
-#*.sh
+*.sh
 ~archive/
 STYLE\ TRANSFER/
 GT_SWAP/
 renderer/stroke_models/
 saved/
 train_out/
+cache/
+
 # Prepare_IAM (Handwriting Database)A
 
 # results
