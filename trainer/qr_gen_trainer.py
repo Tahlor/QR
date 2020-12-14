@@ -196,13 +196,13 @@ class QRGenTrainer(BaseTrainer):
             self.ramp_qr_losses_start=50000 if 'ramp_qr_losses_start' not in config['trainer'] else config['trainer']['ramp_qr_losses_start']
             self.ramp_qr_losses_end = self.modulate_pixel_loss_start if 'modulate_pixel_loss_start' in config['trainer'] else config['trainer']['ramp_qr_losses_end']
 
-        self.i_cant=False
+        self.i_cant=config['i_cant'] if 'i_cant' in config else config['trainer']['i_cant'] if 'i_cant' in config['trainer'] else False
 
         self.combine_qr_loss = False if 'combine_qr_loss' not in config['trainer'] else config['trainer']['combine_qr_loss']
 
         self.hack_gen_loss_cap = config['trainer']['hack_gen_loss_cap'] if 'hack_gen_loss_cap' in config['trainer'] else None
 
-        if 'pixel' in  self.loss and "corner_image_mask" in self.loss['pixel'].__dict__:
+        if 'pixel' in  self.loss and "corner_image_mask" in self.loss['pixel'].__dict__ and (config['trainer']['corner_image_mask'] if 'corner_image_mask' in config['trainer'] else False):
             self.corner_image_mask = self.loss['pixel'].corner_image_mask
         else:
             self.corner_image_mask = None
@@ -841,6 +841,8 @@ class QRGenTrainer(BaseTrainer):
                                      f"{self.iteration}_{b}.png", prepared_images[b])
                 else:
                     isvalid.append(False)
+                    if self.i_cant:
+                        img_f.imwrite('i_cant/{}.png'.format(random.randrange(100)),prepared_images[b])
 
                 if best_fake_index is not None and self.SAVE_GOOD_FAKES and name <= 200:
                     if b == best_fake_index:
