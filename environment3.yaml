@@ -28,7 +28,7 @@ dependencies:
     - easydict
     - torchsummary
     - pyzbar
-
+    - visdom
 
 
 # prefix: /home/taylor/env/anaconda3/envs/qr
