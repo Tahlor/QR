@@ -12,6 +12,7 @@ import math, random
 import utils.img_f as img_f
 
 import random, string
+from .simple_qr_dataset import SimpleQRDataset
 PADDING_CONSTANT = -1
 
 
@@ -33,6 +34,8 @@ class SimpleImageDataset(Dataset):
             torchvision.transforms.ColorJitter(0.01,0.01,0.01,0.1)
             ])
 
+        self.qr_dataset=None
+
     def __len__(self):
         return len(self.index)
 
@@ -47,6 +50,14 @@ class SimpleImageDataset(Dataset):
         img = torch.from_numpy(img).permute(2,0,1).float()
         if img.max()>=220:
             img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
+        if img.size(0)==4: #alpha channel, we'll fill it with a QR code image
+            if self.qr_dataset is None:
+                self.qr_dataset=SimpleQRDataset(None,'train',{'str_len':17,'final_size':self.size})
+            qr_img =self.qr_dataset[0]['image']
+            qr_img = (qr_img+1)/2
+            qr_img = qr_img.expand(3,-1,-1) #convert to color
+            qr_img[:,(img[3]>0).bool()] =img[:3,(img[3]>0).bool()] #add image where alpha is >0
+            img=qr_img
         img = self.transform(img)
         img = img*2 -1
 
