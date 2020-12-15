@@ -158,9 +158,10 @@ def occlude(img):
 def img2tensor(img):
     return (torch.from_numpy(np.asarray(img))[None, ...].float() / 255) * 2 - 1
 
-def blur(img, max_intensity=1.5):
-    max_intensity = np.random.uniform(0, max_intensity)
-    return ndimage.gaussian_filter(img, max_intensity)
+def blur(img, max_intensity=1.5, actual_intensity=None):
+    if actual_intensity is None:
+        actual_intensity = np.random.uniform(0, max_intensity)
+    return ndimage.gaussian_filter(img, actual_intensity)
 
 def gaussian_noise(img, max_intensity=10, logger=None):
     """

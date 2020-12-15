@@ -1,5 +1,5 @@
 import json
-
+from PIL import ImageEnhance, Image
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
@@ -20,6 +20,18 @@ import data_utils
 
 import random, string
 PADDING_CONSTANT = -1
+
+def change_contrast(img, min_contrast=.25, max_contrast=1.3, contrast=None):
+    if isinstance(img, np.ndarray):
+        if img.ndim > 2:
+            assert img.shape[-1]==1
+            img = img[:, :, 0]
+        img = Image.fromarray(np.uint8(img), "L")
+    enhancer = ImageEnhance.Contrast(img)
+    if contrast is None:
+        contrast = np.random.rand()*(max_contrast-min_contrast)+min_contrast
+    #Image.fromarray(np.array(enhancer.enhance(contrast))).show()
+    return np.array(enhancer.enhance(contrast))
 
 def collate(batch):
     batch = [b for b in batch if b is not None]
