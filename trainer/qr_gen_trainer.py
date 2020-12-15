@@ -19,8 +19,6 @@ from datasets import gen_sample_dataset
 
 from model.style_gan2_losses import d_logistic_loss, d_r1_loss, g_nonsaturating_loss, g_path_regularize
 
-SAVE_VALID=True
-SAVE_GOOD_FAKES=True
 
 def make_noise(batch, latent_dim, n_noise, device):
     if n_noise == 1:
@@ -51,14 +49,21 @@ class QRGenTrainer(BaseTrainer):
         super(QRGenTrainer, self).__init__(model, loss, metrics, resume, config, train_logger)
         assert(self.curriculum)
         self.config = edict(config)
-
-        self.valid_dir = Path(self.config.sample_data_loader.cache_dir) / "valid"
-        self.good_fakes_dir = Path(self.config.sample_data_loader.cache_dir) / "good_fakes"
-        self.random_fakes_dir = Path(self.config.sample_data_loader.cache_dir) / "samples"
-        (self.random_fakes_dir / "QR").mkdir(exist_ok=True, parents=True)
-        self.valid_dir.mkdir(exist_ok=True,parents=True)
-        self.good_fakes_dir.mkdir(exist_ok=True, parents=True)
-
+        
+        self.SAVE_VALID=True
+        self.SAVE_GOOD_FAKES=True
+        self.SAVE_RANDOM_FAKES=True
+        try: 
+            self.valid_dir = Path(self.config.sample_data_loader.cache_dir) / "valid"
+            self.good_fakes_dir = Path(self.config.sample_data_loader.cache_dir) / "good_fakes"
+            self.valid_dir.mkdir(exist_ok=True,parents=True)
+            self.good_fakes_dir.mkdir(exist_ok=True, parents=True)
+            self.random_fakes_dir = Path(self.config.sample_data_loader.cache_dir) / "samples"
+            (self.random_fakes_dir / "QR").mkdir(exist_ok=True, parents=True)
+        except AttributeError:
+            self.SAVE_VALID=False
+            self.SAVE_GOOD_FAKES=False
+            self.SAVE_RANDOM_FAKES=False
 
         if data_loader is not None:
             batch_size_size = data_loader.batch_size
@@ -98,10 +103,6 @@ class QRGenTrainer(BaseTrainer):
             if self.balance_loss.startswith('sign_preserve_x'):
                 self.balance_x = float(self.balance_loss[self.balance_loss.find('x')+1:])
             self.saved_grads = [] #this will hold the gradients for previous training steps if "no-step" is specified
-
-
-
-
 
         if 'align_network' in config['trainer']:
             self.align_network = JoinNet()
@@ -193,13 +194,13 @@ class QRGenTrainer(BaseTrainer):
             self.ramp_qr_losses_start=50000 if 'ramp_qr_losses_start' not in config['trainer'] else config['trainer']['ramp_qr_losses_start']
             self.ramp_qr_losses_end = self.modulate_pixel_loss_start if 'modulate_pixel_loss_start' in config['trainer'] else config['trainer']['ramp_qr_losses_end']
 
-        self.i_cant=False
+        self.i_cant=config['i_cant'] if 'i_cant' in config else config['trainer']['i_cant'] if 'i_cant' in config['trainer'] else False
 
         self.combine_qr_loss = False if 'combine_qr_loss' not in config['trainer'] else config['trainer']['combine_qr_loss']
 
         self.hack_gen_loss_cap = config['trainer']['hack_gen_loss_cap'] if 'hack_gen_loss_cap' in config['trainer'] else None
 
-        if 'pixel' in  self.loss and "corner_image_mask" in self.loss['pixel'].__dict__:
+        if 'pixel' in  self.loss and "corner_image_mask" in self.loss['pixel'].__dict__ and (config['trainer']['corner_image_mask'] if 'corner_image_mask' in config['trainer'] else False):
             self.corner_image_mask = self.loss['pixel'].corner_image_mask
         else:
             self.corner_image_mask = None
@@ -833,25 +834,24 @@ class QRGenTrainer(BaseTrainer):
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                     isvalid.append(True)
-                    if SAVE_VALID:
+                    if self.SAVE_VALID:
                        img_f.imwrite(self.valid_dir /
                                      f"{self.iteration}_{b}.png", prepared_images[b])
                 else:
                     isvalid.append(False)
+                    if self.i_cant:
+                        img_f.imwrite('i_cant/{}.png'.format(random.randrange(100)),prepared_images[b])
 
-                # Save best/worst fakes
-                if b == 0:
+                if b == 0 and self.SAVE_RANDOM_FAKES:
                     qr_gt = ((qr_image[0] + 1) * 255 / 2).cpu().detach().permute(1, 2, 0).numpy().clip(0, 255).astype(np.uint8)
                     img_f.imwrite(self.random_fakes_dir / f"{name}.png", prepared_images[b])
                     img_f.imwrite(self.random_fakes_dir / "QR" / f"{name}.png", qr_gt.squeeze())
-                if False:
-                    if best_fake_index is not None and SAVE_GOOD_FAKES and name <= 200:
-                        if b == best_fake_index:
-                            img_f.imwrite(self.good_fakes_dir / f"{name}_{b}.png", prepared_images[b])
-                        elif b == worst_fake_index:
-                            img_f.imwrite(self.good_fakes_dir / f"WORST_{name}_{b}.png", prepared_images[b])
 
-                self.random_fakes_dir
+                if best_fake_index is not None and self.SAVE_GOOD_FAKES and name <= 200:
+                    if b == best_fake_index:
+                        img_f.imwrite(self.good_fakes_dir / f"{name}_{b}.png", prepared_images[b])
+                    elif b == worst_fake_index:
+                        img_f.imwrite(self.good_fakes_dir / f"WORST_{name}_{b}.png", prepared_images[b])
 
                 #    print('read:{} | gt:{}'.format(read,instance['gt_char'][b]))
                 proper_ratio = correctly_decoded/batch_size

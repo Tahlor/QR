@@ -55,7 +55,7 @@ class SimpleImageDataset(Dataset):
                 self.qr_dataset=SimpleQRDataset(None,'train',{'str_len':17,'final_size':self.size})
             qr_img =self.qr_dataset[0]['image']
             qr_img = (qr_img+1)/2
-            qr_img = qr_img.expand(3,-1,-1) #convert to color
+            qr_img = qr_img.expand(3,-1,-1).clone() #convert to color
             qr_img[:,(img[3]>0).bool()] =img[:3,(img[3]>0).bool()] #add image where alpha is >0
             img=qr_img
         img = self.transform(img)
