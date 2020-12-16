@@ -52,7 +52,7 @@ class SimpleImageDataset(Dataset):
             img=img/255 #I think different versions of Pytorch do the conversion from bool to float differently
         if img.size(0)==4: #alpha channel, we'll fill it with a QR code image
             if self.qr_dataset is None:
-                self.qr_dataset=SimpleQRDataset(None,'train',{'str_len':17,'final_size':self.size})
+                self.qr_dataset=SimpleQRDataset(None,'train',{'str_len':17,'final_size':self.size, 'noise':False})
             qr_img =self.qr_dataset[0]['image']
             qr_img = (qr_img+1)/2
             qr_img = qr_img.expand(3,-1,-1).clone() #convert to color

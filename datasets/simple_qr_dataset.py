@@ -54,6 +54,8 @@ class SimpleQRDataset(Dataset):
         self.final_size = config['final_size'] if 'final_size' in config else None
         self.min_str_len = max(3,config["min_message_len"]) if 'min_message_len' in config else 4
 
+        self.noise = config['noise']
+
         if "max_message_len" in config:
             config['str_len'] = config["max_message_len"]
 
@@ -116,7 +118,8 @@ class SimpleQRDataset(Dataset):
             img = img_f.resize(img,(self.final_size,self.final_size),degree=0)
 
         # Slight noise
-        img = data_utils.gaussian_noise(img.astype(np.uint)*255, max_intensity=1)
+        if self.noise:
+            img = data_utils.gaussian_noise(img.astype(np.uint)*255, max_intensity=1)
 
         img = torch.from_numpy(img)[None,...].float()
         if img.max() == 255:
