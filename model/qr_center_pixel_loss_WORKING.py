@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import numpy as np
-
+from scipy import ndimage
 
 class QRCenterPixelLoss(nn.Module):
     def __init__(self, img_size, qr_size, padding, threshold=0, bigger=False, split=False, factor=1.0,
-                 no_corners=False):
+                 no_corners=False, blur=False):
         super(QRCenterPixelLoss, self).__init__()
         assert (qr_size <= 33)
         self.threshold = threshold
@@ -74,6 +74,15 @@ class QRCenterPixelLoss(nn.Module):
             if self.split:
                 self.plot(self.get_mask(corner_mask=True))
             pass
+
+        if blur:
+            # binary_tensor_plot(self.mask)
+            mask = self.mask.detach().numpy() * 255
+            mask = ndimage.gaussian_filter(mask, 1.5) / 255 * 1.2
+            mask = np.minimum(1, mask)
+            self.mask = torch.Tensor(mask)
+            # binary_tensor_plot(self.mask)
+
 
     @staticmethod
     def plot(mask):
