@@ -66,7 +66,7 @@ class SimpleQRDataset(Dataset):
         self.final_size = config['final_size'] if 'final_size' in config else None
         self.min_str_len = max(3,config["min_message_len"]) if 'min_message_len' in config else 4
 
-        self.noise = config['noise']
+        self.noise = config['noise'] if "noise" in config else False
 
         if "max_message_len" in config:
             config['str_len'] = config["max_message_len"]
