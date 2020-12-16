@@ -834,7 +834,7 @@ class QRGenTrainer(BaseTrainer):
                 if read==instance['gt_char'][b]:
                     correctly_decoded+=1
                     isvalid.append(True)
-                    if self.SAVE_VALID:
+                    if self.SAVE_VALID and self.iteration > 2000:
                        img_f.imwrite(self.valid_dir /
                                      f"{self.iteration}_{b}.png", prepared_images[b])
                 else:
@@ -842,12 +842,12 @@ class QRGenTrainer(BaseTrainer):
                     if self.i_cant:
                         img_f.imwrite('i_cant/{}.png'.format(random.randrange(100)),prepared_images[b])
 
-                if b == 0 and self.SAVE_RANDOM_FAKES:
+                if b == 0 and self.SAVE_RANDOM_FAKES and self.iteration > 2000:
                     qr_gt = ((qr_image[0] + 1) * 255 / 2).cpu().detach().permute(1, 2, 0).numpy().clip(0, 255).astype(np.uint8)
                     img_f.imwrite(self.random_fakes_dir / f"{name}.png", prepared_images[b])
                     img_f.imwrite(self.random_fakes_dir / "QR" / f"{name}.png", qr_gt.squeeze())
 
-                if best_fake_index is not None and self.SAVE_GOOD_FAKES and name <= 200:
+                if best_fake_index is not None and self.SAVE_GOOD_FAKES and name <= 200 and self.iteration > 2000:
                     if b == best_fake_index:
                         img_f.imwrite(self.good_fakes_dir / f"{name}_{b}.png", prepared_images[b])
                     elif b == worst_fake_index:
