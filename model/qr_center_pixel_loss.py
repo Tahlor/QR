@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-
+from scipy import ndimage
 import torch
 from torch import nn
 import numpy as np
@@ -8,7 +8,8 @@ import random
 MASTER_STRING=string.ascii_letters
 
 class QRCenterPixelLoss(nn.Module):
-    def __init__(self,img_size,qr_size,padding,threshold=0,bigger=False,split=False,factor=1.0, no_corners=False):
+    def __init__(self,img_size,qr_size,padding,threshold=0,
+                 bigger=False,split=False,factor=1.0, no_corners=False, blur=True):
         super(QRCenterPixelLoss, self).__init__()
         assert(qr_size<=33)
         self.threshold=threshold
@@ -21,40 +22,40 @@ class QRCenterPixelLoss(nn.Module):
 
         if no_corners:
             split = self.split = False # hack; turn off split, don't mask corners below
-        else:
-            if split:
-                mask_corners = self.mask_corners = torch.FloatTensor(img_size,img_size).zero_()
-            else:
-                mask_corners = self.mask
 
-            #mask achors (with padding)
-            top_left_left_x = round((padding-1)*cell_size)
-            top_left_right_x = round((padding+7+1)*cell_size)
-            top_left_top_y = round((padding-1)*cell_size)
-            top_left_bot_y = round((padding+7+1)*cell_size)
-            mask_corners[top_left_top_y:top_left_bot_y,top_left_left_x:top_left_right_x]=1
+        mask_corners = self.mask_corners = torch.FloatTensor(img_size,img_size).zero_()
 
-            top_right_left_x = round((padding+qr_size-8)*cell_size)
-            top_right_right_x = round((padding+qr_size+1)*cell_size)
-            top_right_top_y = round((padding-1)*cell_size)
-            top_right_bot_y = round((padding+7+1)*cell_size)
-            mask_corners[top_right_top_y:top_right_bot_y,top_right_left_x:top_right_right_x]=1
+        #mask achors (with padding)
+        top_left_left_x = round((padding-1)*cell_size)
+        top_left_right_x = round((padding+7+1)*cell_size)
+        top_left_top_y = round((padding-1)*cell_size)
+        top_left_bot_y = round((padding+7+1)*cell_size)
+        mask_corners[top_left_top_y:top_left_bot_y,top_left_left_x:top_left_right_x]=1
 
-            bot_left_left_x = round((padding-1)*cell_size)
-            bot_left_right_x = round((padding+7+1)*cell_size)
-            bot_left_top_y = round((padding+qr_size-8)*cell_size)
-            bot_left_bot_y = round((padding+qr_size+1)*cell_size)
-            mask_corners[bot_left_top_y:bot_left_bot_y,bot_left_left_x:bot_left_right_x]=1
+        top_right_left_x = round((padding+qr_size-8)*cell_size)
+        top_right_right_x = round((padding+qr_size+1)*cell_size)
+        top_right_top_y = round((padding-1)*cell_size)
+        top_right_bot_y = round((padding+7+1)*cell_size)
+        mask_corners[top_right_top_y:top_right_bot_y,top_right_left_x:top_right_right_x]=1
 
-            if qr_size>=25:#bottom right anchor only exists in larged qr codes
-                bot_right_left_x = round((padding+qr_size-7 -2)*cell_size)
-                bot_right_right_x = round((padding+qr_size-7 +3)*cell_size)
-                bot_right_top_y = round((padding+qr_size-7 -2)*cell_size)
-                bot_right_bot_y = round((padding+qr_size-7 +3)*cell_size)
-                mask_corners[bot_right_top_y:bot_right_bot_y,bot_right_left_x:bot_right_right_x]=1
+        bot_left_left_x = round((padding-1)*cell_size)
+        bot_left_right_x = round((padding+7+1)*cell_size)
+        bot_left_top_y = round((padding+qr_size-8)*cell_size)
+        bot_left_bot_y = round((padding+qr_size+1)*cell_size)
+        mask_corners[bot_left_top_y:bot_left_bot_y,bot_left_left_x:bot_left_right_x]=1
 
-        if self.split or True:
-            self.mask_corners = mask_corners.clone()[None, ...]
+        if qr_size>=25:#bottom right anchor only exists in larged qr codes
+            bot_right_left_x = round((padding+qr_size-7 -2)*cell_size)
+            bot_right_right_x = round((padding+qr_size-7 +3)*cell_size)
+            bot_right_top_y = round((padding+qr_size-7 -2)*cell_size)
+            bot_right_bot_y = round((padding+qr_size-7 +3)*cell_size)
+            mask_corners[bot_right_top_y:bot_right_bot_y,bot_right_left_x:bot_right_right_x]=1
+
+        if self.split:
+            self.mask_corners = mask_corners.clone()
+        elif not no_corners:
+            self.mask = mask_corners.clone()
+
         #mask pixel centers. I'll do full at very center and 0.5 around
         for cell_r in range(qr_size):
             for cell_c in range(qr_size):
@@ -69,12 +70,22 @@ class QRCenterPixelLoss(nn.Module):
                     self.mask[center_y-1:center_y+2,center_x-1:center_x+2]=0.5*factor
                     self.mask[center_y,center_x]=1
         
-        self.mask=self.mask[None,...] #batch dim
+        self.mask = self.mask[None,...] #batch dim
+        self.mask_corners = self.mask_corners[None,...] #batch dim
+
         if False: # plot
             self.plot(self.get_mask())
             if self.split:
                 self.plot(self.get_mask(corner_mask=True))
             pass
+        if blur:
+            mask = self.mask.detach().numpy() * 255
+            mask = ndimage.gaussian_filter(mask, 1.5) / 255 * 2
+            mask = np.minimum(1,mask)
+            self.mask = torch.Tensor(mask)
+        # plt.imshow(self.mask.permute(1, 2, 0))
+        # plt.show()
+        # stop
         self.corner_image_mask = self.get_corner_image(size=img_size)
 
     @staticmethod
@@ -179,10 +190,12 @@ def print_masks(qr):
         plt.show()
 
 def binary_tensor_plot(t):
-    img = t.permute([1,2,0]).detach().cpu().numpy() * 255
+    if isinstance(t, torch.Tensor):
+        img = t.permute([1,2,0]).detach().cpu().numpy() * 255
+    else:
+        img = t
     plt.imshow(img,cmap="gray")
     plt.show()
-
 
 if __name__=="__main__":
     size = 256

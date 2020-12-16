@@ -9,6 +9,8 @@ from easydict import EasyDict as edict
 import gen_slurm_scripts
 import socket
 
+
+
 def get_computer():
     return socket.gethostname()
 def is_galois():

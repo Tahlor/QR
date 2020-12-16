@@ -4,9 +4,19 @@ from skimage import io as io
 import matplotlib.pyplot as plt
 from skimage.filters import gaussian, unsharp_mask
 from skimage.exposure import adjust_log
+import numpy as np
+from pathlib import Path
+import matplotlib
+import cv2
+import sys
+sys.path.append("../datasets")
+import data_utils
 
 def imread(path,color=True):
-    return io.imread(path,not color)
+    x = io.imread(path,not color)
+    #y = matplotlib.pyplot.imread(path) # imports from 0,1
+    #z = cv2.imread(path)
+    return x
 
 def zbar_decode(img):
     from pyzbar.pyzbar import decode as pyzbar_decode
@@ -52,9 +62,15 @@ def fade_in_mask(art, qr_img, qr_intensity):
     faded_in[faded_in !=0] = ((1-qr_intensity)*art[faded_in !=0] + qr_intensity*qr_img[faded_in !=0])
     return faded_in
 
-def main(qr_img, art):
-    qr_img = imread(str(qr_img))
-    art = imread(str(art))
+def main(qr_img_path, art_path, output_dir=None):
+    qr_img = imread(str(qr_img_path))
+    qr_img = data_utils.blur(qr_img, actual_intensity=3)
+    #plt.imshow(qr_img); plt.show()
+
+    if len(qr_img.shape)==2:
+        qr_img = qr_img[:,:,None]
+        qr_img = np.tile(qr_img, (1, 3))
+    art = imread(str(art_path))
 
     for i in range(0,11):
         output_image = fade_in_mask(art=art, qr_img=qr_img, qr_intensity=i/10.)
@@ -62,11 +78,32 @@ def main(qr_img, art):
         if result:
             print(f"Decoded at {i*10}%")
             break
+
     # save the output image
-    plt.imshow(output_image); plt.show()
+    # if 0 < i < 10:
+    #      output_image = fade_in_mask(art=art, qr_img=qr_img, qr_intensity=(i+1) / 10.)
 
-if __name__=='__main__':
+    output_image = output_image.astype(np.uint8)
+    if output_dir is None: #or True:
+        plt.imshow(output_image); plt.show()
+    else:
+        sa=str(Path(output_dir) / Path(qr_img_path).name)
+        plt.imsave(sa, output_image)
+        #cv2.imwrite(sa, output_image)
 
+
+def folder(folder="/media/data/GitHub/qr2/cache/GOOD_just_paths/samples"):
+    output_dir = Path(folder) / "post_process2"
+    output_dir.mkdir(exist_ok=True, parents=True)
+    for f in Path(folder).glob("*.png"):
+        qr = f.parent / "QR" / f.name
+        main(qr, f, output_dir)
+
+def test():
     qr_img = "../images/post_process/gen_gt_75156.png"
     art = qr_img.replace("gen_gt", "gen_samples")# "./images/post_process/gen_samples_75156.png"
     main(qr_img, art)
+
+if __name__=='__main__':
+    folder()
+    #test()
