@@ -3,6 +3,8 @@ from skimage import io as io
 from skimage import filters as filters
 from skimage import transform as transform
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
 
 #These are all based on the OpenCV functions, to make the conversion to scikit image easier (also should make future changes easier as well)
 

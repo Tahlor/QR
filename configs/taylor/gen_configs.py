@@ -74,7 +74,7 @@ for dataset in datasets.keys():
                         config.loss_weights.valid = 0
                         config.loss_weights.pixel = 1.2
 
-                        config.loss_params.pixel.qr_size = 33
+                        config.loss_params.pixel.qr_size = config.model.qr_size = 33
                         config.loss_params.pixel.factor = 1.5
 
                         # delete encoder
@@ -113,7 +113,9 @@ for dataset in datasets.keys():
                     else:
                         config.loss_params.pixel.factor = 1
 
-                    config.loss_params.pixel.threshold = .25
+                    config.model.discriminator = "StyleGAN2 mask_corners " + patch_type
+
+                    config.loss_params.pixel.threshold = .6
                     hi_res = "hi_res" if hi_res else "low_res"
                     name = f"{VERS}_{dataset}_{hi_res}_{patch_type}_{masked_inputs}"
 
@@ -122,6 +124,7 @@ for dataset in datasets.keys():
 
                     Path(config.trainer.print_dir).mkdir(parents=True, exist_ok=True)
                     Path(config.sample_data_loader.cache_dir).mkdir(parents=True, exist_ok=True)
+
 
                     config.name = Path(name).stem
                     json.dump(config.__dict__,(out / f"___{name}.json").open("w"), indent=4, separators=(',', ':'))

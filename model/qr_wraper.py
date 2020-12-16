@@ -118,24 +118,32 @@ class QRWraper(BaseModel):
                 else:
                     channel_multiplier=2
                 smaller='smaller' in config['discriminator']
+
+                qr_size = config['qr_size'] if 'qr_size' in config else 21
+                qr_padding = config['qr_padding'] if 'qr_padding' in config else 2
+                print("QR size discriminator", qr_size)
+                print("QR size discriminator", qr_padding)
+
                 if "patch" in config['discriminator'].lower():
                     receptive_field_mask = "receptive_field" in config['discriminator'].lower()
                     corner_mask = "corner" in config['discriminator'].lower()
                     conv_layers = re.findall("(layers)([0-9]+)", config['discriminator'].lower())
                     conv_layers = int(conv_layers[0][1]) if conv_layers else None
                     print("Conv layers: ", conv_layers)
+
+
                     self.discriminator = SG2DiscriminatorPatch(256,
                                                                channel_multiplier=channel_multiplier,
                                                                smaller=smaller,
-                                                               qr_size=21,
-                                                               padding=2,
+                                                               qr_size=qr_size,
+                                                               padding=qr_padding,
                                                                receptive_field_mask=receptive_field_mask,
                                                                corner_mask=corner_mask,
                                                                conv_layers=conv_layers)
                 else:
                     mask_corners = config['discriminator'] if 'mask_corners' in config['discriminator'] else False
-                    qr_size = config['qr_size'] if 'qr_size' in config else 21
-                    qr_padding = config['qr_padding'] if 'qr_padding' in config else 2
+                    #qr_size = config['qr_size'] if 'qr_size' in config else 21
+                    #qr_padding = config['qr_padding'] if 'qr_padding' in config else 2
                     self.discriminator=SG2Discriminator(256,
                                                         channel_multiplier=channel_multiplier,
                                                         smaller=smaller,

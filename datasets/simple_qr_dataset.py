@@ -158,9 +158,6 @@ class SimpleQRDataset(Dataset):
             "masked_img": masked_img
         }
 
-# add noise
-# blur
-
 def plot(img, mask=False):
     import matplotlib.pyplot as plt
     if mask:

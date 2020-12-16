@@ -9,7 +9,7 @@ MASTER_STRING=string.ascii_letters
 
 class QRCenterPixelLoss(nn.Module):
     def __init__(self,img_size,qr_size,padding,threshold=0,
-                 bigger=False,split=False,factor=1.0, no_corners=False, blur=True):
+                 bigger=False,split=False,factor=1.0, no_corners=False, blur=False):
         super(QRCenterPixelLoss, self).__init__()
         assert(qr_size<=33)
         self.threshold=threshold
@@ -79,10 +79,13 @@ class QRCenterPixelLoss(nn.Module):
                 self.plot(self.get_mask(corner_mask=True))
             pass
         if blur:
+            #binary_tensor_plot(self.mask)
             mask = self.mask.detach().numpy() * 255
-            mask = ndimage.gaussian_filter(mask, 1.5) / 255 * 2
+            mask = ndimage.gaussian_filter(mask, 1.5) / 255 * 1.2
             mask = np.minimum(1,mask)
             self.mask = torch.Tensor(mask)
+            #binary_tensor_plot(self.mask)
+
         # plt.imshow(self.mask.permute(1, 2, 0))
         # plt.show()
         # stop
@@ -201,7 +204,8 @@ if __name__=="__main__":
     size = 256
     length = 34
     error = "h" # h is best
-    qr = QRCenterPixelLoss(size, 33, 2, 0.1, bigger=True, split=False, factor=1.5, no_corners=False)
+    qr = QRCenterPixelLoss(size, 33, 2, 0.1, bigger=True, split=False, factor=1.5, no_corners=True)
     img = qr.get_corner_image()
     binary_tensor_plot(img)
+    plt.imshow(qr.mask[0], cmap="gray"); plt.show()
     pass

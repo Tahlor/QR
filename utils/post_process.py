@@ -99,11 +99,11 @@ def folder(folder="/media/data/GitHub/qr2/cache/GOOD_just_paths/samples"):
         qr = f.parent / "QR" / f.name
         main(qr, f, output_dir)
 
-def test():
-    qr_img = "../images/post_process/gen_gt_75156.png"
+def test(qr_img = "../images/post_process/gen_gt_75156.png"):
+
     art = qr_img.replace("gen_gt", "gen_samples")# "./images/post_process/gen_samples_75156.png"
     main(qr_img, art)
 
 if __name__=='__main__':
-    folder()
-    #test()
+    #folder()
+    test("/media/data/GitHub/qr2/train_out/GOOD_just_paths/gen_gt_113041.png")

@@ -51,7 +51,7 @@ class QRGenTrainer(BaseTrainer):
         self.config = edict(config)
         
         self.SAVE_VALID=True
-        self.SAVE_GOOD_FAKES=True
+        self.SAVE_GOOD_FAKES=False
         self.SAVE_RANDOM_FAKES=True
         try: 
             self.valid_dir = Path(self.config.sample_data_loader.cache_dir) / "valid"
@@ -986,7 +986,11 @@ class QRGenTrainer(BaseTrainer):
 
     def print_images(self,images,text,disc=None,typ='gen',gtImages=None):
         if self.print_dir is not None:
+            #prepared_images = ((images + 1) * 255 / 2).cpu().detach().permute(0, 2, 3, 1).numpy().clip(0, 255).astype(np.uint8)
             images = images.clamp(-1,1).detach()
+            if self.corner_image_mask is not None:
+                images = torch.maximum(images, torch.tensor(self.corner_image_mask[None,:, :])/255.)
+
             nrow = max(1,2048//images.size(3))
             if self.iteration-self.last_print_images[typ]>=self.serperate_print_every:
                 iterP = self.iteration
