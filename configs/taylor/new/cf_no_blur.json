@@ -102,7 +102,7 @@
             "img_size": 256,
             "qr_size": 33,
             "padding": 2,
-            "threshold": 0.6,
+            "threshold": 0.8,
             "bigger": true,
             "split": true,
             "no_corners": false,
@@ -248,7 +248,7 @@
         "balance_loss": "sign_preserve_var",
         "balance_var_x": {
             "0": [
-                0.3
+                0.01
             ]
         },
         "combine_qr_loss": true,
